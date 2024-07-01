@@ -15,9 +15,7 @@
     {% include "item.njk" %}
     {{ YEAR }}
 
-    api stuff, this is not working yet and may not be required as we are going
-    to use htmx to render all the data so might be overkill to have a
-    preprocessor
+    api rendering
     <ul>
       {% for item in resArray %}
       <li>{{ item }}</li>
