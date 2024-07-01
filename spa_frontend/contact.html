@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="no-referrer" />
+    <title>Contact</title>
+
+    <!-- Load the router script -->
+    <script src="assets/js/router.js"></script>
+
+    <script>
+      // Define routes and handlers
+      const routes = {
+        "/": function () {
+          console.log("Home page");
+        },
+        "/about/:id": function (params) {
+          console.log(`About page with id ${params.id}`);
+        },
+        "/contact": function () {
+          console.log("Contact page");
+        },
+        default: function () {
+          console.log("Page not found");
+        },
+      };
+
+      // Create router instance
+      const router = createRouter(routes);
+
+      // Initialize the router
+      router.init();
+    </script>
+
+    <!-- Include htmx library -->
+    <script src="https://unpkg.com/htmx.org@2.0.0"></script>
+
+    <script>
+      // Set htmx configuration
+      htmx.config.selfRequestsOnly = false;
+    </script>
+  </head>
+  <body>
+    <h1>Contact Us</h1>
+
+    <!-- Content of your contact page -->
+  </body>
+</html>

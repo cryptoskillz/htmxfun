@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="no-referrer" />
+  </head>
+  <body>
+    <!-- have a button POST a click via AJAX -->
+    <script src="https://unpkg.com/htmx.org@2.0.0"></script>
+    <script>
+      // Set htmx configuration
+      htmx.config.selfRequestsOnly = false;
+    </script>
+    Yay
+
+    2024
+
+    api stuff, this is not working yet and may not be required as we are going
+    to use htmx to render all the data so might be overkill to have a
+    preprocessor
+    <ul>
+      
+      <li>1</li>
+      
+      <li>2</li>
+      
+      <li>3</li>
+      
+    </ul>
+
+    <div hx-get="http://localhost:8787/">Get Some HTML</div>
+
+    <button hx-get="http://localhost:8787/" hx-swap="outerHTML">
+      Click Me
+    </button>
+  </body>
+</html>
