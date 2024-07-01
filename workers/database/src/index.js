@@ -30,37 +30,24 @@ export default {
 			});
 		} else if (request.method === 'POST') {
 			const contentType = request.headers.get('Content-Type') || '';
-			if (contentType.includes('application/json')) {
-				const json = await request.json();
-				const { name, description } = json;
+			//if (contentType.includes('application/json')) {
+			//const json = await request.json();
+			//const { name, description } = json;
 
-				const stmt = env.DB.prepare('INSERT INTO projects (name, description) VALUES (?, ?)');
-				await stmt.bind(name, description).run();
+			//const stmt = env.DB.prepare('INSERT INTO projects (name, description) VALUES (?, ?)');
+			//await stmt.bind(name, description).run();
 
-				const htmlResponse = `
-          <html>
-            <body>
+			const htmlResponse = `
               <div>
                 <p>Project added successfully!</p>
               </div>
-            </body>
-          </html>
-        `;
-				return new Response(htmlResponse, {
-					headers: {
-						'Access-Control-Allow-Origin': '*',
-						'Content-Type': 'text/html',
-					},
-				});
-			} else {
-				return new Response('<html><body><div>Unsupported content type</div></body></html>', {
-					status: 415,
-					headers: {
-						'Access-Control-Allow-Origin': '*',
-						'Content-Type': 'text/html',
-					},
-				});
-			}
+            `;
+			return new Response(htmlResponse, {
+				headers: {
+					'Access-Control-Allow-Origin': '*',
+					'Content-Type': 'text/html',
+				},
+			});
 		}
 
 		// Handle unsupported methods

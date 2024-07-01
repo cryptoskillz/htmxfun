@@ -8,21 +8,21 @@
   <body>
     <!-- have a button POST a click via AJAX -->
     <script src="https://unpkg.com/htmx.org@2.0.0"></script>
-    <script>
-      // Set htmx configuration
-      htmx.config.selfRequestsOnly = false;
-    </script>
+    <script src="/assets/js/script.js"></script>
+
+    <!-- Nunjucks include and variable rendering -->
     {% include "item.njk" %}
     {{ YEAR }}
 
-    api rendering
+    <!-- API rendering -->
     <ul>
       {% for item in resArray %}
       <li>{{ item }}</li>
       {% endfor %}
     </ul>
 
-    <div hx-get="http://localhost:8787/" hx-vals='{"seat": "1-1"}'>
+    <!-- Get the values from local storage -->
+    <div id="tableButton" hx-post="http://localhost:8787/" hx-vals="">
       Get Some HTML, Including Params
     </div>
 
@@ -31,5 +31,17 @@
     <button hx-get="http://localhost:8787/" hx-swap="outerHTML">
       Click Me
     </button>
+
+    <!-- Script to call the functions -->
+    <script>
+      // Set htmx configuration
+      htmx.config.selfRequestsOnly = false;
+
+      // Call storeLocal and getLocal when the document is ready
+      whenDocumentReady(() => {
+        storeLocal();
+        getLocal("tableButton");
+      });
+    </script>
   </body>
 </html>
