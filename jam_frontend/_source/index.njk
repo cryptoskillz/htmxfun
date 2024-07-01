@@ -22,6 +22,10 @@
       {% endfor %}
     </ul>
 
+    <div hx-get="http://localhost:8787/" hx-vals='{"seat": "1-1"}'>
+      Get Some HTML, Including Params
+    </div>
+
     <div hx-get="http://localhost:8787/">Get Some HTML</div>
 
     <button hx-get="http://localhost:8787/" hx-swap="outerHTML">

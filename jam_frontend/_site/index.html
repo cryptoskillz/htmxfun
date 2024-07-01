@@ -16,9 +16,7 @@
 
     2024
 
-    api stuff, this is not working yet and may not be required as we are going
-    to use htmx to render all the data so might be overkill to have a
-    preprocessor
+    api rendering
     <ul>
       
       <li>1</li>
@@ -28,6 +26,10 @@
       <li>3</li>
       
     </ul>
+
+    <div hx-get="http://localhost:8787/" hx-vals='{"seat": "1-1"}'>
+      Get Some HTML, Including Params
+    </div>
 
     <div hx-get="http://localhost:8787/">Get Some HTML</div>
 
