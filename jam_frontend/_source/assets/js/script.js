@@ -12,6 +12,42 @@ const getLocal = (theElement) => {
   }
 };
 
+//get the url paramaters
+const getURLParameter = () => {
+  // Get the current URL
+  const currentUrl = window.location.href;
+  const urlObj = new URL(currentUrl);
+  const searchParams = new URLSearchParams(urlObj.search);
+  const params = {};
+  let hasTable = false;
+
+  searchParams.forEach((value, key) => {
+    // Check if the first parameter is "table"
+    if (key === "table") {
+      hasTable = true;
+    }
+
+    // Split comma-separated values into an array, if applicable
+    if (value.includes(",")) {
+      params[key] = value.split(",");
+    } else {
+      params[key] = value;
+    }
+  });
+
+  if (hasTable) {
+    const paramsJson = JSON.stringify(params);
+    // Ensure theDiv exists before setting the attribute
+    const theDiv = document.getElementById("table");
+    if (theDiv) {
+      theDiv.setAttribute("hx-vals", paramsJson);
+    }
+  }
+};
+
+// Call the function when the document is ready
+document.addEventListener("DOMContentLoaded", getURLParameter);
+
 // Function to execute when document is ready
 let whenDocumentReady = (f) => {
   /in/.test(document.readyState)
@@ -25,5 +61,6 @@ let isReady = () => {};
 // Exporting the functions to make them globally accessible
 window.storeLocal = storeLocal;
 window.getLocal = getLocal;
+window.getURLParameter = getURLParameter;
 window.whenDocumentReady = whenDocumentReady;
 window.isReady = isReady;

@@ -13,11 +13,8 @@
     <script>
       // Set htmx configuration
       htmx.config.selfRequestsOnly = false;
-
-      // Call storeLocal and getLocal when the document is ready
       whenDocumentReady(() => {
-        storeLocal();
-        getLocal("tableButton");
+        getURLParameter();
       });
     </script>
   </body>

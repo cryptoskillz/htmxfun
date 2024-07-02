@@ -8,7 +8,7 @@
   </head>
   <body>
     
-<div hx-get="/graph" hx-trigger="load">
+<div id="table" hx-get="http://localhost:8787/" hx-trigger="load" hx-vals="">
   <img
     alt="Result loading..."
     class="htmx-indicator"
@@ -22,11 +22,8 @@
     <script>
       // Set htmx configuration
       htmx.config.selfRequestsOnly = false;
-
-      // Call storeLocal and getLocal when the document is ready
       whenDocumentReady(() => {
-        storeLocal();
-        getLocal("tableButton");
+        getURLParameter();
       });
     </script>
   </body>
