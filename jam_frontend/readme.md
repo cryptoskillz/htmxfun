@@ -5,7 +5,7 @@ It may not be for you and that's ok.
 
 The following has been directly stolen from eleventy
 
-frontmatter
+front matter
 layout
 nunjucks support
 
