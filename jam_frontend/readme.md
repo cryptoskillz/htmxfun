@@ -3,26 +3,32 @@ This a static generator.
 It is bascically a copy of all the core functions of eleventy. It is created specifically to suit my needs and is set up to deploy my sites as quickly as possible in a format that suots me.
 It may not be for you and that's ok.
 
-frontend
+The following has been directly stolen from eleventy
 
-\_source
-
-this folder contains all the NJK files to be copied across
-in this folder if there is an asssets folder it will copy it all across
+frontmatter
+layout
+nunjucks support
 
 \_data
 
-env.js
-set the var to be used in NJK
+    env.js
+    set the var to be used in NJK
 
-api.js
-not working yet and may never work as we may replace this with htmx
+    api.js
+    not working yet and may never work as we may replace this with htmx
 
 \_includes
-njk files to include
+
+    njk files to include
 
 \_site
-this where the statically genrated site is copied to
+
+    this where the statically genrated site is built
+
+\_source
+
+    this folder contains all the NJK files to be copied across
+    in this folder if there is an asssets folder it will copy it all across
 
 usage
 
@@ -32,11 +38,6 @@ in \_site run a http server I use http-server https://www.npmjs.com/package/http
 parammaters
 
 delete = deletes the contents of the \_site folder
-
-workers
-
-helloworld
-This work is an example to show it rendering HTML
 
 usage
 
