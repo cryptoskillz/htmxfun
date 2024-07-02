@@ -4,12 +4,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="referrer" content="no-referrer" />
-    <title></title>
+    <title>{{ title }}</title>
   </head>
   <body>
-    
-<a href="table/">Projects</a>
-
+    {{ content | safe }}
     <script src="https://unpkg.com/htmx.org@2.0.0"></script>
     <script src="/assets/js/script.js"></script>
     <script>

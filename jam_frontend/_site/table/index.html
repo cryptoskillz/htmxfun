@@ -8,7 +8,14 @@
   </head>
   <body>
     
-<a href="table/">Projects</a>
+<div hx-get="/graph" hx-trigger="load">
+  <img
+    alt="Result loading..."
+    class="htmx-indicator"
+    width="150"
+    src="/assets/img/bars.svg"
+  />
+</div>
 
     <script src="https://unpkg.com/htmx.org@2.0.0"></script>
     <script src="/assets/js/script.js"></script>

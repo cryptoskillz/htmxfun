@@ -1,2 +1,2 @@
-add a layout njk
-add frontmatter
+*add a layout njk
+*add frontmatter

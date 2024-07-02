@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="no-referrer" />
+  </head>
+  <body>
+    <!-- have a button POST a click via AJAX -->
+    <script src="https://unpkg.com/htmx.org@2.0.0"></script>
+    <script src="/assets/js/script.js"></script>
+
+    <!-- Nunjucks include and variable rendering -->
+    {% include "item.njk" %}
+    {{ YEAR }}
+
+    <!-- API rendering -->
+    <ul>
+      {% for item in resArray %}
+      <li>{{ item }}</li>
+      {% endfor %}
+    </ul>
+
+    <!-- Get the values from local storage -->
+    <div id="tableButton" hx-post="http://localhost:8787/" hx-vals="">
+      Get Some HTML, Including Params
+    </div>
+
+    <div hx-get="http://localhost:8787/">Get Some HTML</div>
+
+    <button hx-get="http://localhost:8787/" hx-swap="outerHTML">
+      Click Me
+    </button>
+
+    <!-- Script to call the functions -->
+    <script>
+      // Set htmx configuration
+      htmx.config.selfRequestsOnly = false;
+
+      // Call storeLocal and getLocal when the document is ready
+      whenDocumentReady(() => {
+        storeLocal();
+        getLocal("tableButton");
+      });
+    </script>
+  </body>
+</html>

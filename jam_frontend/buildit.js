@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const nunjucks = require("nunjucks");
+const matter = require("gray-matter");
 
 // Get the delete flag from command line arguments
 const args = process.argv.slice(2);
@@ -20,7 +21,7 @@ const api = require("./_data/api.js");
 
 // Setup Nunjucks environment
 nunjucks.configure([sourceFolder, includesFolder], {
-  autoescape: true,
+  autoescape: false, // Disable autoescape
   noCache: true,
 });
 
@@ -93,42 +94,51 @@ fs.readdir(sourceFolder, async (err, files) => {
   for (const file of files) {
     const sourceFilePath = path.join(sourceFolder, file);
     if (path.extname(file) === ".njk") {
-      if (file === "index.njk") {
-        // Move the index.njk file to the destination base folder as index.html
-        const destFilePath = path.join(destBaseFolder, "index.html");
-        try {
-          const data = await fs.promises.readFile(sourceFilePath, "utf8");
+      try {
+        const data = await fs.promises.readFile(sourceFilePath, "utf8");
 
-          // Render the Nunjucks template with the environment variables and API data
-          const renderedContent = nunjucks.renderString(data, context);
+        // Parse the front matter
+        const parsed = matter(data);
+        const content = parsed.content;
+        const frontMatter = parsed.data;
 
-          await fs.promises.writeFile(destFilePath, renderedContent, "utf8");
-          console.log(
-            `Successfully moved and processed ${file} to ${destBaseFolder}`
+        // Render the content with Nunjucks first
+        const renderedContent = nunjucks.renderString(content, context);
+
+        let finalContent = renderedContent;
+
+        // Determine if a layout is specified
+        if (frontMatter.layout) {
+          const layoutFilePath = path.join(
+            includesFolder,
+            frontMatter.layout + ".njk"
           );
-        } catch (err) {
-          console.error("Error processing the Nunjucks file:", err);
-        }
-      } else {
-        const fileNameWithoutExt = path.basename(file, ".njk");
-        const newFolderPath = path.join(destBaseFolder, fileNameWithoutExt);
-        const newFilePath = path.join(newFolderPath, "index.html");
+          const layoutData = await fs.promises.readFile(layoutFilePath, "utf8");
 
-        try {
+          // Render the layout with the rendered content inserted
+          finalContent = nunjucks.renderString(layoutData, {
+            ...context,
+            content: renderedContent,
+          });
+        }
+
+        let newFilePath;
+
+        // Special case for index.njk to render to index.html in the root
+        if (file === "index.njk") {
+          newFilePath = path.join(destBaseFolder, "index.html");
+        } else {
+          const fileNameWithoutExt = path.basename(file, ".njk");
+          const newFolderPath = path.join(destBaseFolder, fileNameWithoutExt);
+          newFilePath = path.join(newFolderPath, "index.html");
           await fs.promises.mkdir(newFolderPath, { recursive: true });
-
-          // Read the content of the original Nunjucks file
-          const data = await fs.promises.readFile(sourceFilePath, "utf8");
-
-          // Render the Nunjucks template with the environment variables and API data
-          const renderedContent = nunjucks.renderString(data, context);
-
-          // Write the content to a new HTML file named index.html in the created folder
-          await fs.promises.writeFile(newFilePath, renderedContent, "utf8");
-          console.log(`Successfully created ${newFilePath}`);
-        } catch (err) {
-          console.error("Error processing the Nunjucks file:", err);
         }
+
+        // Write the final content to the appropriate HTML file
+        await fs.promises.writeFile(newFilePath, finalContent, "utf8");
+        console.log(`Successfully created ${newFilePath}`);
+      } catch (err) {
+        console.error("Error processing the Nunjucks file:", err);
       }
     }
   }
