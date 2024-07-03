@@ -129,7 +129,13 @@ fs.readdir(sourceFolder, async (err, files) => {
           newFilePath = path.join(destBaseFolder, "index.html");
         } else {
           const fileNameWithoutExt = path.basename(file, ".njk");
-          const newFolderPath = path.join(destBaseFolder, fileNameWithoutExt);
+          // Check if outputFolder is specified in front matter
+          let newFolderPath;
+          if (frontMatter.outputFolder) {
+            newFolderPath = path.join(destBaseFolder, frontMatter.outputFolder);
+          } else {
+            newFolderPath = path.join(destBaseFolder, fileNameWithoutExt);
+          }
           newFilePath = path.join(newFolderPath, "index.html");
           await fs.promises.mkdir(newFolderPath, { recursive: true });
         }

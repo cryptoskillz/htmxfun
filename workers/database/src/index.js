@@ -1,12 +1,3 @@
-/*
-
-add post to add
-add put to  edit
-add delete toelete
-add options to, what the hell does options do again? 
-
-*/
-
 export default {
 	async fetch(request, env, ctx) {
 		// Handle preflight requests
@@ -21,27 +12,71 @@ export default {
 			});
 		}
 
-		/**
-		 * Sends a response with the given message, status code, and content type.
+		/*
+		 * Renders HTML based on the given render type, table, fields, and results.
 		 *
-		 * @param {string} theMessage - The message to send in the response.
-		 * @param {number} theCode - The status code of the response.
-		 * @param {string} [theType='text/html'] - The content type of the response.
-		 * @return {Response} The response object.
+		 * @param {string} renderType - The type of rendering to be done.
+		 * @param {string} table - The name of the table.
+		 * @param {Array} fields - An array of field names.
+		 * @param {Array} results - An array of result objects.
+		 * @return {string} The rendered HTML.
 		 */
+		const renderHtML = (renderType, table, fields, results) => {
+			let htmlResponse = '';
 
+			if (renderType == 'table') {
+				htmlResponse = `
+				<table border="1">
+					<thead>
+					<tr>
+						${fields.map((field) => `<th>${field}</th>`).join('')}
+						<td>Action</td>
+					</tr>
+					</thead>
+					<tbody>
+					${results
+						.map(
+							(result) => `
+						<tr>
+						${fields.map((field) => `<td>${result[field]}</td>`).join('')}
+						<td>
+							<a href="/table/edit/?table=${table}&id=${result.id}">Edit</a> | <a href="/delete/${table}/${result.id}">Delete</a>
+						</td>
+						</tr>
+					`
+						)
+						.join('')}
+					</tbody>
+				</table>
+				`;
+			}
+
+			if (renderType == 'form') {
+				htmlResponse = `<div>form</div>`;
+			}
+			// Return the HTML response
+			return htmlResponse;
+		};
+
+		/*
+		 * Creates and returns a new Response object with the provided message, status code, and content type.
+		 *
+		 * @param {string} theMessage - The message to be sent in the response.
+		 * @param {number} theCode - The status code of the response.
+		 * @param {string} [theType='text/html'] - The content type of the response. Defaults to 'text/html'.
+		 * @return {Response} The newly created Response object.
+		 */
 		const sendResponse = (theMessage, theCode, theType = 'text/html') => {
-			// Create a new response object with the given message, status code, and content type.
 			return new Response(theMessage, {
 				status: theCode,
 				headers: {
-					'Access-Control-Allow-Origin': '*', // Allow CORS for all origins
-					'Content-Type': theType, // Set the content type of the response
+					'Access-Control-Allow-Origin': '*',
+					'Content-Type': theType,
 				},
 			});
 		};
 
-		// Handle actual requests
+		// Handle GET requests
 		if (request.method === 'GET') {
 			// Extract the Hx-Current-Url header
 			const currentUrl = request.headers.get('Hx-Current-Url');
@@ -58,9 +93,12 @@ export default {
 				}
 			});
 
-			const { table, fields } = params;
+			// Extract specific values from params
+			const { table, fields, id, type } = params;
+
+			// Check if required parameters are present
 			if (!table || !fields) {
-				return sendResponse('Missing required parameters: table and fields', code);
+				return sendResponse('Missing required parameters: table and fields', 400);
 			}
 
 			const fieldsString = fields.join(', ');
@@ -68,50 +106,33 @@ export default {
 			// Prepare and execute the SQL query
 			let theQuery = '';
 			try {
-				theQuery = `SELECT ${fieldsString} FROM ${table} where isDeleted = 0`; // Add WHERE clause to filter deleted records, note this is assumed flag for all tables
+				//add a id check
+				theQuery = `SELECT ${fieldsString} FROM ${table} WHERE isDeleted = 0`; // Add WHERE clause to filter deleted records
+				if (id !== undefined && id !== '') {
+					theQuery += ` AND id = ${id}`;
+				}
+				// Execute the SQL query
 				const stmt = env.DB.prepare(theQuery);
 				const { results } = await stmt.all();
-
+				// set a default value for type
+				let renderType = 'table';
+				// Check if type parameter is present
+				if (type !== undefined && type !== '') {
+					renderType = type;
+				}
 				// Generate HTML response
-				const htmlResponse = `
-					<table border="1">
-						<thead>
-						<tr>
-							${fields.map((field) => `<th>${field}</th>`).join('')}
-							<td>
-								Action
-							</td>
-						</tr>
-						
-						</thead>
-						<tbody>
-						${results
-							.map(
-								(result) => `
-							<tr>
-							${fields.map((field) => `<td>${result[field]}</td>`).join('')}
-						<td>
-								<a href="/edit/${table}/${result.id}">Edit</a> | <a href="/delete/${table}/${result.id}">Delete</a>
-							</td>
-							</tr>	
-						`
-							)
-							.join('')}
-							
-						</tbody>
-					</table>
-					`;
-
+				const htmlResponse = renderHtML(renderType, table, fields, results);
+				// Return the HTML response
 				return sendResponse(htmlResponse, 200);
 			} catch (error) {
+				// Log and return error response
 				console.error('Error executing query:', error);
 				const htmlResponse = `Error executing query ${theQuery}`;
-				return sendResponse(htmlResponse, 200);
-				sendResponse(htmlResponse, 200);
+				return sendResponse(htmlResponse, 500);
 			}
 		}
 
-		// Handle actual requests
+		// Handle POST requests
 		if (request.method === 'POST') {
 			// Parse the JSON body of the POST request
 			let jsonData;
@@ -134,7 +155,7 @@ export default {
 			return sendResponse(htmlResponse, 200);
 		}
 
-		// Handle unsupported methods, this should not be required as we will have a call for each option
+		// Handle unsupported methods
 		return sendResponse('Method Not Allowed', 405);
 	},
 };
