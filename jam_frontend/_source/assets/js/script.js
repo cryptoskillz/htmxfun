@@ -45,6 +45,44 @@ const getURLParameter = () => {
   }
 };
 
+const getURLParameter2 = () => {
+  const currentUrl = window.location.href;
+  const urlObj = new URL(currentUrl);
+  const searchParams = new URLSearchParams(urlObj.search);
+  const params = {};
+  let hasTable = false;
+
+  searchParams.forEach((value, key) => {
+    if (key === "table") {
+      hasTable = true;
+    }
+    if (value.includes(",")) {
+      params[key] = value.split(",");
+    } else {
+      params[key] = value;
+    }
+  });
+
+  if (hasTable) {
+    const paramsJson = JSON.stringify(params);
+    const theDiv = document.getElementById("table");
+    if (theDiv) {
+      // Set the href attribute with query parameters
+      const queryString = Object.keys(params)
+        .map(
+          (key) =>
+            `${key}=${
+              Array.isArray(params[key]) ? params[key].join(",") : params[key]
+            }`
+        )
+        .join("&");
+      const url = new URL(theDiv.getAttribute("hx-get"));
+      url.search = queryString;
+      theDiv.setAttribute("hx-get", url.toString());
+    }
+  }
+};
+
 // Call the function when the document is ready
 document.addEventListener("DOMContentLoaded", getURLParameter);
 

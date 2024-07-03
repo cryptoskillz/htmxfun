@@ -13,7 +13,6 @@ const getLocal = (theElement) => {
 };
 
 //get the url paramaters
-//note we ware making assumpations at this point that there will be url paramaters and we want to update the hx-vals we should check for this
 const getURLParameter = () => {
   // Get the current URL
   const currentUrl = window.location.href;
@@ -42,6 +41,44 @@ const getURLParameter = () => {
     const theDiv = document.getElementById("table");
     if (theDiv) {
       theDiv.setAttribute("hx-vals", paramsJson);
+    }
+  }
+};
+
+const getURLParameter2 = () => {
+  const currentUrl = window.location.href;
+  const urlObj = new URL(currentUrl);
+  const searchParams = new URLSearchParams(urlObj.search);
+  const params = {};
+  let hasTable = false;
+
+  searchParams.forEach((value, key) => {
+    if (key === "table") {
+      hasTable = true;
+    }
+    if (value.includes(",")) {
+      params[key] = value.split(",");
+    } else {
+      params[key] = value;
+    }
+  });
+
+  if (hasTable) {
+    const paramsJson = JSON.stringify(params);
+    const theDiv = document.getElementById("table");
+    if (theDiv) {
+      // Set the href attribute with query parameters
+      const queryString = Object.keys(params)
+        .map(
+          (key) =>
+            `${key}=${
+              Array.isArray(params[key]) ? params[key].join(",") : params[key]
+            }`
+        )
+        .join("&");
+      const url = new URL(theDiv.getAttribute("hx-get"));
+      url.search = queryString;
+      theDiv.setAttribute("hx-get", url.toString());
     }
   }
 };
