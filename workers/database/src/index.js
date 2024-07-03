@@ -21,12 +21,22 @@ export default {
 			});
 		}
 
+		/**
+		 * Sends a response with the given message, status code, and content type.
+		 *
+		 * @param {string} theMessage - The message to send in the response.
+		 * @param {number} theCode - The status code of the response.
+		 * @param {string} [theType='text/html'] - The content type of the response.
+		 * @return {Response} The response object.
+		 */
+
 		const sendResponse = (theMessage, theCode, theType = 'text/html') => {
+			// Create a new response object with the given message, status code, and content type.
 			return new Response(theMessage, {
 				status: theCode,
 				headers: {
-					'Access-Control-Allow-Origin': '*',
-					'Content-Type': theType,
+					'Access-Control-Allow-Origin': '*', // Allow CORS for all origins
+					'Content-Type': theType, // Set the content type of the response
 				},
 			});
 		};
@@ -81,7 +91,7 @@ export default {
 							<tr>
 							${fields.map((field) => `<td>${result[field]}</td>`).join('')}
 						<td>
-								Add / Delete
+								<a href="/edit/${table}/${result.id}">Edit</a> | <a href="/delete/${table}/${result.id}">Delete</a>
 							</td>
 							</tr>	
 						`
@@ -121,7 +131,6 @@ export default {
           <p>Received fields: ${fields.join(', ')}</p>
         </div>
       `;
-
 			return sendResponse(htmlResponse, 200);
 		}
 
