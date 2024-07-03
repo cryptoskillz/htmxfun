@@ -1,5 +1,8 @@
 #!/bin/bash
 
+#supported paramaters
+#delete (node buildit.js delete) this deletes everything in the _site folder
+
 # Function to get current time in milliseconds
 get_current_time_in_ms() {
     date +%s%3N | awk '{ printf "%d\n", $1 }'
