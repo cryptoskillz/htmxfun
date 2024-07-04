@@ -1,0 +1,17 @@
+---
+outputFolder: user,projects
+layout: layout
+title: "Table Page"
+---
+
+<div id="table" hx-get="http://localhost:8787/" hx-trigger="load" hx-vals="">
+  <img
+    alt="Result loading..."
+    class="htmx-indicator"
+    width="150"
+    src="/assets/img/bars.svg"
+  />
+</div>
+<div>
+  <a href="add/">Add Record</a>
+</div>

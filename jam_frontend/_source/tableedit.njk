@@ -1,0 +1,17 @@
+---
+outputFolder: user/edit,projects/edit
+layout: layout
+title: "Edit Page"
+---
+
+<div id="table" hx-get="http://localhost:8787/" hx-trigger="load" hx-vals="">
+  <img
+    alt="Result loading..."
+    class="htmx-indicator"
+    width="150"
+    src="/assets/img/bars.svg"
+  />
+</div>
+<div>
+  <a href="add/?table=projects">Update Record</a>
+</div>
