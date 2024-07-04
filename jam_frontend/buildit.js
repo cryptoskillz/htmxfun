@@ -138,12 +138,20 @@ fs.readdir(sourceFolder, async (err, files) => {
         // Handle the default output path if no specific folders are defined
         if (outputFolders.length === 0) {
           const fileNameWithoutExt = path.basename(file, ".njk");
-          const newFolderPath = path.join(destBaseFolder, fileNameWithoutExt);
-          const newFilePath = path.join(newFolderPath, "index.html");
+          if (fileNameWithoutExt === "index") {
+            // Render as index.html directly in the root
+            const newFilePath = path.join(destBaseFolder, "index.html");
+            await fs.promises.writeFile(newFilePath, finalContent, "utf8");
+            console.log(`Successfully created ${newFilePath}`);
+          } else {
+            // Render in a folder named after the file
+            const newFolderPath = path.join(destBaseFolder, fileNameWithoutExt);
+            const newFilePath = path.join(newFolderPath, "index.html");
 
-          await fs.promises.mkdir(newFolderPath, { recursive: true });
-          await fs.promises.writeFile(newFilePath, finalContent, "utf8");
-          console.log(`Successfully created ${newFilePath}`);
+            await fs.promises.mkdir(newFolderPath, { recursive: true });
+            await fs.promises.writeFile(newFilePath, finalContent, "utf8");
+            console.log(`Successfully created ${newFilePath}`);
+          }
         }
       } catch (err) {
         console.error("Error processing the Nunjucks file:", err);

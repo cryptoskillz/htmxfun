@@ -8,13 +8,8 @@
   </head>
   <body>
     
-<!-- 
-    passing the tablke and fields like this may not be ideal as it exposes it in the URL string but is makes thing so easy i am going with it
-    this also means the getLocal / Storelocal may not be required
-    We could also move the fields to the API and remove it from the frontend aktogether this would make it less flexible across mutlipile projects but that is not the end of the world
-    amy of these options work
--->
-<a href="table/?table=projects&fields=id,guid,name">Projects</a>
+<a href="/projects/">Projects</a>
+<a href="/user/">Users</a>
 
     <script src="https://unpkg.com/htmx.org@2.0.0"></script>
     <script src="/assets/js/script.js"></script>
