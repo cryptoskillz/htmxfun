@@ -23,52 +23,32 @@ export default {
 		 */
 		const renderHtML = (renderType, table, fields, results) => {
 			let htmlResponse = '';
-
+			console.log(renderType);
 			if (renderType == 'table') {
 				htmlResponse = `
 					<table class="table delete-row-example">
-  <thead>
-   	<tr>
-						${fields.map((field) => `<th>${field}</th>`).join('')}
-						<td>Action</td>
-					</tr>
-  </thead>
-  <tbody hx-target="closest tr" hx-swap="outerHTML">
-   ${results
-			.map(
-				(result) => `
+					<thead>
 						<tr>
-						${fields.map((field) => `<td>${result[field]}</td>`).join('')}
-						<td>
-							 <button class="btn danger"
-                hx-get="/table/"
-                hx-trigger="edit"
-                onClick="let editing = document.querySelector('.editing')
-                         if(editing) {
-                           Swal.fire({title: 'Already Editing',
-                                      showCancelButton: true,
-                                      confirmButtonText: 'Yep, Edit This Row!',
-                                      text:'Hey!  You are already editing a row!  Do you want to cancel that edit and continue?'})
-                           .then((result) => {
-                                if(result.isConfirmed) {
-                                   htmx.trigger(editing, 'cancel')
-                                   htmx.trigger(this, 'edit')
-                                }
-                            })
-                         } else {
-                            htmx.trigger(this, 'edit')
-                         }">
-          Edit
-        </button>
-							
-							| <a href="/delete/${table}/${result.id}">Delete</a>
-						</td>
+							${fields.map((field) => `<th>${field}</th>`).join('')}
+							<td>Action</td>
 						</tr>
-					`
-			)
-			.join('')}
-  </tbody>
-</table>	`;
+  					</thead>
+					<tbody hx-target="closest tr" hx-swap="outerHTML">
+					${results
+						.map(
+							(result) => `
+											<tr>
+											${fields.map((field) => `<td>${result[field]}</td>`).join('')}
+											<td>
+												<a class="btn" href="/${table}/edit/?id=${result.id}">Edit</a>
+												| <a href="/${table}/edit/?id=${result.id}">Delete</a>
+											</td>
+											</tr>
+										`
+						)
+						.join('')}
+					</tbody>
+					</table>	`;
 			}
 
 			if (renderType == 'form') {
@@ -106,6 +86,7 @@ export default {
 		 */
 		const setFields = (table) => {
 			if (table == 'projects') return ['id', 'name', 'guid'];
+			if (table == 'user') return ['id', 'name', 'email'];
 		};
 
 		// Handle GET requests
@@ -117,6 +98,8 @@ export default {
 
 			//get the current url
 			const currentUrl = request.headers.get('Hx-Current-Url');
+			//console.log(currentUrl);
+			//console.log(request.headers);
 			const urlObj = new URL(currentUrl);
 			const searchParams = new URLSearchParams(urlObj.search);
 			// Parse query parameters
@@ -137,12 +120,14 @@ export default {
 			//set the render type
 			let renderType = 'table';
 			//check for an id
+
 			if (params.id !== undefined) {
 				//set the id
 				id = params.id;
 				//set render type to form
 				renderType = 'form';
 			}
+			console.log(renderType);
 
 			// Prepare and execute the SQL query
 			let theQuery = '';
@@ -155,8 +140,7 @@ export default {
 				// Execute the SQL query
 				const stmt = env.DB.prepare(theQuery);
 				const { results } = await stmt.all();
-				// set a default value for type
-				let renderType = 'table';
+				// Generate HTML response
 				const htmlResponse = renderHtML(renderType, table, fieldNames, results);
 				// Return the HTML response
 				return sendResponse(htmlResponse, 200);
