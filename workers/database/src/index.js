@@ -1,3 +1,11 @@
+/*
+
+todo
+
+have a black list of fields for the edit / add form
+render the tables with all fields in the databas except the blacklisted fields
+
+*/
 export default {
 	async fetch(request, env, ctx) {
 		// Handle preflight requests
@@ -12,52 +20,92 @@ export default {
 			});
 		}
 
-		/*
+		/**
 		 * Renders HTML based on the given render type, table, fields, and results.
 		 *
 		 * @param {string} renderType - The type of rendering to be done.
 		 * @param {string} table - The name of the table.
 		 * @param {Array} fields - An array of field names.
 		 * @param {Array} results - An array of result objects.
+		 * @param {Object} [params] - Additional parameters.
 		 * @return {string} The rendered HTML.
 		 */
-		const renderHtML = (renderType, table, fields, results, params) => {
+		const renderHTML = (renderType, tableName, fields, theData, params) => {
 			let htmlResponse = '';
-			if (renderType == 'table') {
+
+			if (renderType === 'table') {
+				const dataToRender = Array.isArray(theData.results) ? theData.results : [theData];
+
 				htmlResponse = `
-					<table class="table delete-row-example">
-					<thead>
-						<tr>
-							${fields.map((field) => `<th>${field}</th>`).join('')}
-							<td>Action</td>
-						</tr>
-  					</thead>
-					<tbody hx-target="closest tr" hx-swap="outerHTML">
-					${results
-						.map(
-							(result) => `
-											<tr>
-											${fields.map((field) => `<td>${result[field]}</td>`).join('')}
-											<td>
-												<a class="btn" href="/${table}/edit/?id=${result.id}">Edit</a>
-												| <a href="/${table}/edit/?id=${result.id}">Delete</a>
-											</td>
-											</tr>
-										`
-						)
-						.join('')}
-					</tbody>
-					</table>	`;
+            <table class="table delete-row-example">
+                <thead>
+                    <tr>
+                        ${fields.map((field) => `<th>${field}</th>`).join('')}
+                        <td>Action</td>
+                    </tr>
+                </thead>
+                <tbody hx-target="closest tr" hx-swap="outerHTML">
+                    ${dataToRender
+											.map(
+												(result) => `
+                        <tr>
+                            ${fields.map((field) => `<td>${result[field]}</td>`).join('')}
+                            <td>
+                                <a class="btn" href="/${tableName}/edit/?id=${result.id}">Edit</a>
+                                | <a href="/${tableName}/edit/?id=${result.id}">Delete</a>
+                            </td>
+                        </tr>
+                    `
+											)
+											.join('')}
+                </tbody>
+            </table>`;
+			} else if (renderType === 'formedit' && theData) {
+				const formData = Array.isArray(theData.results) ? theData.results[0] : theData;
+
+				const formFields = Object.keys(formData)
+					.filter((key) => key !== 'id') // Exclude 'id' field for form add
+					.map(
+						(key) => `
+                <div class="form-group">
+                    <label>${key.charAt(0).toUpperCase() + key.slice(1)}</label>
+                    <input type="text" name="${key}" value="${formData[key]}" />
+                </div>
+            `
+					)
+					.join('');
+
+				// Generate the HTML form for editing or adding
+				htmlResponse = `
+            <form hx-put="/${tableName}/${formData.id || ''}" hx-target="this" hx-swap="outerHTML">
+                ${formFields}
+                <button type="submit" class="btn">Submit</button>
+                <a class="btn" href="/${tableName}/">Cancel</a>
+            </form>`;
+			} else if (renderType === 'formadd' && theData && Array.isArray(theData.results)) {
+				const formFields = theData.results
+					.filter((field) => field.name !== 'id') // Exclude 'id' field for form add
+					.map(
+						(field) => `
+                <div class="form-group">
+                    <label>${field.name.charAt(0).toUpperCase() + field.name.slice(1)}</label>
+                    <input type="text" name="${field.name}" />
+                </div>
+            `
+					)
+					.join('');
+
+				// Generate the HTML form for adding a new record
+				htmlResponse = `
+            <form hx-post="/${tableName}/" hx-target="this" hx-swap="outerHTML">
+                ${formFields}
+                <button type="submit" class="btn">Submit</button>
+                <a class="btn" href="/${tableName}/">Cancel</a>
+            </form>`;
+			} else {
+				htmlResponse = `<div>Unsupported render type: ${renderType}</div>`;
 			}
 
-			if (renderType == 'formedit') {
-				htmlResponse = `<div>edit record</div>`;
-			}
-
-			if (renderType == 'formadd') {
-				htmlResponse = `<div>new record</div>`;
-			}
-			// Return the HTML response
 			return htmlResponse;
 		};
 
@@ -148,20 +196,26 @@ export default {
 				// Handle case where params object is empty, if needed
 			}
 
-			console.log(theQuery);
-
 			try {
 				// Execute the SQL query
 				const stmt = env.DB.prepare(theQuery);
-				const { results } = await stmt.all();
+				let theData;
+				if (renderType == 'table' || renderType == 'formadd') {
+					theData = await stmt.all();
+				} else {
+					theData = await stmt.first(); // Use .get() to fetch a single record
+				}
+
 				let htmlResponse = '';
-				if (results.length === 0) {
+				if (theData.length === 0) {
 					htmlResponse = `<div>no results</div>`;
 				} else {
-					htmlResponse = renderHtML(renderType, tableName, fieldNames, results, params);
+					htmlResponse = renderHTML(renderType, tableName, fieldNames, theData, params);
 				}
 
 				// Return the HTML response
+				//console.log('htmlResponse');
+				//console.log(htmlResponse);
 				return sendResponse(htmlResponse, 200);
 			} catch (error) {
 				// Log and return error response
