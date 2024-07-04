@@ -4,6 +4,7 @@ todo
 
 have a black list of fields for the edit / add form
 render the tables with all fields in the databas except the blacklisted fields
+store the action add / edit to make the checking easier
 
 */
 export default {
@@ -162,7 +163,6 @@ export default {
 			const segments = urlObj.pathname.split('/').filter((segment) => segment.length > 0);
 			//set the table
 			const tableName = segments[0];
-			//TODO: store the action add / edit to make the checking easier
 			//set the fields for this table
 			const fieldNames = setFields(tableName);
 			const fieldsString = fieldNames.join(',');
@@ -170,24 +170,23 @@ export default {
 			let id = '';
 			//set the render type
 			let renderType = 'table';
-			//check for an id
-
 			// Prepare and execute the SQL query
-
 			let theQuery = `SELECT ${fieldsString} FROM ${tableName} WHERE isDeleted = 0`;
-
 			// Check if the params object is empty
 			if (Object.keys(params).length !== 0) {
 				// Check if the id is 0 because if it is, we know it's a new record so return the schema
 				if (params.id == 0) {
 					// Add an id check
 					renderType = 'formadd';
-					theQuery = `PRAGMA table_info(${tableName});`; // Get the schema
+					// Get the schema
+					theQuery = `PRAGMA table_info(${tableName});`;
 				} else if (Number.isInteger(Number(params.id)) && Number(params.id) > 0) {
 					// Check if id is an integer greater than 0
 					theQuery += ` AND id = ${params.id}`; // Add WHERE clause to filter deleted records
+					// Add an id check
 					renderType = 'formedit';
 				} else {
+					// Handle invalid id
 					const htmlResponse = `<div>invalid id</div>`;
 					// Return the HTML response
 					return sendResponse(htmlResponse, 200);
@@ -199,13 +198,18 @@ export default {
 			try {
 				// Execute the SQL query
 				const stmt = env.DB.prepare(theQuery);
+				// Execute the SQL query
 				let theData;
+
+				// Check if the render type is table or form
 				if (renderType == 'table' || renderType == 'formadd') {
+					//get all the results
 					theData = await stmt.all();
 				} else {
-					theData = await stmt.first(); // Use .get() to fetch a single record
+					//get the first result
+					theData = await stmt.first();
 				}
-
+				// Render the HTML response
 				let htmlResponse = '';
 				if (theData.length === 0) {
 					htmlResponse = `<div>no results</div>`;
