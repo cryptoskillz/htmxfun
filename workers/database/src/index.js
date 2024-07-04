@@ -21,9 +21,8 @@ export default {
 		 * @param {Array} results - An array of result objects.
 		 * @return {string} The rendered HTML.
 		 */
-		const renderHtML = (renderType, table, fields, results) => {
+		const renderHtML = (renderType, table, fields, results, params) => {
 			let htmlResponse = '';
-			console.log(renderType);
 			if (renderType == 'table') {
 				htmlResponse = `
 					<table class="table delete-row-example">
@@ -51,8 +50,12 @@ export default {
 					</table>	`;
 			}
 
-			if (renderType == 'form') {
-				htmlResponse = `<div>form</div>`;
+			if (renderType == 'formedit') {
+				htmlResponse = `<div>edit record</div>`;
+			}
+
+			if (renderType == 'formadd') {
+				htmlResponse = `<div>new record</div>`;
 			}
 			// Return the HTML response
 			return htmlResponse;
@@ -107,13 +110,13 @@ export default {
 			searchParams.forEach((value, key) => {
 				params[key] = value.includes(',') ? value.split(',') : value;
 			});
-
 			// Extract the segments from the pathname
 			const segments = urlObj.pathname.split('/').filter((segment) => segment.length > 0);
 			//set the table
-			const table = segments[0];
+			const tableName = segments[0];
+			//TODO: store the action add / edit to make the checking easier
 			//set the fields for this table
-			const fieldNames = setFields(table);
+			const fieldNames = setFields(tableName);
 			const fieldsString = fieldNames.join(',');
 			//check for an id
 			let id = '';
@@ -121,27 +124,43 @@ export default {
 			let renderType = 'table';
 			//check for an id
 
-			if (params.id !== undefined) {
-				//set the id
-				id = params.id;
-				//set render type to form
-				renderType = 'form';
-			}
-			console.log(renderType);
-
 			// Prepare and execute the SQL query
-			let theQuery = '';
-			try {
-				//add a id check
-				theQuery = `SELECT ${fieldsString} FROM ${table} WHERE isDeleted = 0`; // Add WHERE clause to filter deleted records
-				if (id !== undefined && id !== '') {
-					theQuery += ` AND id = ${id}`;
+
+			let theQuery = `SELECT ${fieldsString} FROM ${tableName} WHERE isDeleted = 0`;
+
+			// Check if the params object is empty
+			if (Object.keys(params).length !== 0) {
+				// Check if the id is 0 because if it is, we know it's a new record so return the schema
+				if (params.id == 0) {
+					// Add an id check
+					renderType = 'formadd';
+					theQuery = `PRAGMA table_info(${tableName});`; // Get the schema
+				} else if (Number.isInteger(Number(params.id)) && Number(params.id) > 0) {
+					// Check if id is an integer greater than 0
+					theQuery += ` AND id = ${params.id}`; // Add WHERE clause to filter deleted records
+					renderType = 'formedit';
+				} else {
+					const htmlResponse = `<div>invalid id</div>`;
+					// Return the HTML response
+					return sendResponse(htmlResponse, 200);
 				}
+			} else {
+				// Handle case where params object is empty, if needed
+			}
+
+			console.log(theQuery);
+
+			try {
 				// Execute the SQL query
 				const stmt = env.DB.prepare(theQuery);
 				const { results } = await stmt.all();
-				// Generate HTML response
-				const htmlResponse = renderHtML(renderType, table, fieldNames, results);
+				let htmlResponse = '';
+				if (results.length === 0) {
+					htmlResponse = `<div>no results</div>`;
+				} else {
+					htmlResponse = renderHtML(renderType, tableName, fieldNames, results, params);
+				}
+
 				// Return the HTML response
 				return sendResponse(htmlResponse, 200);
 			} catch (error) {
