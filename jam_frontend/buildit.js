@@ -122,27 +122,29 @@ fs.readdir(sourceFolder, async (err, files) => {
           });
         }
 
-        let newFilePath;
+        // Handle multiple output folders
+        const outputFolders = frontMatter.outputFolder
+          ? frontMatter.outputFolder.split(",").map((folder) => folder.trim())
+          : [];
+        for (const folder of outputFolders) {
+          const newFolderPath = path.join(destBaseFolder, folder);
+          const newFilePath = path.join(newFolderPath, "index.html");
 
-        // Special case for index.njk to render to index.html in the root
-        if (file === "index.njk") {
-          newFilePath = path.join(destBaseFolder, "index.html");
-        } else {
-          const fileNameWithoutExt = path.basename(file, ".njk");
-          // Check if outputFolder is specified in front matter
-          let newFolderPath;
-          if (frontMatter.outputFolder) {
-            newFolderPath = path.join(destBaseFolder, frontMatter.outputFolder);
-          } else {
-            newFolderPath = path.join(destBaseFolder, fileNameWithoutExt);
-          }
-          newFilePath = path.join(newFolderPath, "index.html");
           await fs.promises.mkdir(newFolderPath, { recursive: true });
+          await fs.promises.writeFile(newFilePath, finalContent, "utf8");
+          console.log(`Successfully created ${newFilePath}`);
         }
 
-        // Write the final content to the appropriate HTML file
-        await fs.promises.writeFile(newFilePath, finalContent, "utf8");
-        console.log(`Successfully created ${newFilePath}`);
+        // Handle the default output path if no specific folders are defined
+        if (outputFolders.length === 0) {
+          const fileNameWithoutExt = path.basename(file, ".njk");
+          const newFolderPath = path.join(destBaseFolder, fileNameWithoutExt);
+          const newFilePath = path.join(newFolderPath, "index.html");
+
+          await fs.promises.mkdir(newFolderPath, { recursive: true });
+          await fs.promises.writeFile(newFilePath, finalContent, "utf8");
+          console.log(`Successfully created ${newFilePath}`);
+        }
       } catch (err) {
         console.error("Error processing the Nunjucks file:", err);
       }

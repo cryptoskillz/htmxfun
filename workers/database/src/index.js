@@ -26,29 +26,49 @@ export default {
 
 			if (renderType == 'table') {
 				htmlResponse = `
-				<table border="1">
-					<thead>
-					<tr>
+					<table class="table delete-row-example">
+  <thead>
+   	<tr>
 						${fields.map((field) => `<th>${field}</th>`).join('')}
 						<td>Action</td>
 					</tr>
-					</thead>
-					<tbody>
-					${results
-						.map(
-							(result) => `
+  </thead>
+  <tbody hx-target="closest tr" hx-swap="outerHTML">
+   ${results
+			.map(
+				(result) => `
 						<tr>
 						${fields.map((field) => `<td>${result[field]}</td>`).join('')}
 						<td>
-							<a href="/table/edit/?table=${table}&id=${result.id}">Edit</a> | <a href="/delete/${table}/${result.id}">Delete</a>
+							 <button class="btn danger"
+                hx-get="/table/"
+                hx-trigger="edit"
+                onClick="let editing = document.querySelector('.editing')
+                         if(editing) {
+                           Swal.fire({title: 'Already Editing',
+                                      showCancelButton: true,
+                                      confirmButtonText: 'Yep, Edit This Row!',
+                                      text:'Hey!  You are already editing a row!  Do you want to cancel that edit and continue?'})
+                           .then((result) => {
+                                if(result.isConfirmed) {
+                                   htmx.trigger(editing, 'cancel')
+                                   htmx.trigger(this, 'edit')
+                                }
+                            })
+                         } else {
+                            htmx.trigger(this, 'edit')
+                         }">
+          Edit
+        </button>
+							
+							| <a href="/delete/${table}/${result.id}">Delete</a>
 						</td>
 						</tr>
 					`
-						)
-						.join('')}
-					</tbody>
-				</table>
-				`;
+			)
+			.join('')}
+  </tbody>
+</table>	`;
 			}
 
 			if (renderType == 'form') {
@@ -76,32 +96,53 @@ export default {
 			});
 		};
 
+		/**
+		 * Returns an array of field names based on the given table name.
+		 *
+		 * @param {string} table - The name of the table.
+		 * @return {Array<string>} An array of field names. If the table name is 'projects', returns ['id', 'name', 'guid'].
+		 *
+		 * we could get the fields from a env variable to make this more secure and easier to manage
+		 */
+		const setFields = (table) => {
+			if (table == 'projects') return ['id', 'name', 'guid'];
+		};
+
 		// Handle GET requests
 		if (request.method === 'GET') {
-			// Extract the Hx-Current-Url header
+			/*
+				We have moved the tbale processing to the worker which removes a bunch of the functionality from the front end which is not the worst 
+				thing in the world. 
+			*/
+
+			//get the current url
 			const currentUrl = request.headers.get('Hx-Current-Url');
 			const urlObj = new URL(currentUrl);
-			const searchParams = urlObj.searchParams;
-
-			// Parse query parameters from the Hx-Current-Url
+			const searchParams = new URLSearchParams(urlObj.search);
+			// Parse query parameters
 			const params = {};
 			searchParams.forEach((value, key) => {
-				if (value.includes(',')) {
-					params[key] = value.split(',');
-				} else {
-					params[key] = value;
-				}
+				params[key] = value.includes(',') ? value.split(',') : value;
 			});
 
-			// Extract specific values from params
-			const { table, fields, id, type } = params;
-
-			// Check if required parameters are present
-			if (!table || !fields) {
-				return sendResponse('Missing required parameters: table and fields', 400);
+			// Extract the segments from the pathname
+			const segments = urlObj.pathname.split('/').filter((segment) => segment.length > 0);
+			//set the table
+			const table = segments[0];
+			//set the fields for this table
+			const fieldNames = setFields(table);
+			const fieldsString = fieldNames.join(',');
+			//check for an id
+			let id = '';
+			//set the render type
+			let renderType = 'table';
+			//check for an id
+			if (params.id !== undefined) {
+				//set the id
+				id = params.id;
+				//set render type to form
+				renderType = 'form';
 			}
-
-			const fieldsString = fields.join(', ');
 
 			// Prepare and execute the SQL query
 			let theQuery = '';
@@ -116,12 +157,7 @@ export default {
 				const { results } = await stmt.all();
 				// set a default value for type
 				let renderType = 'table';
-				// Check if type parameter is present
-				if (type !== undefined && type !== '') {
-					renderType = type;
-				}
-				// Generate HTML response
-				const htmlResponse = renderHtML(renderType, table, fields, results);
+				const htmlResponse = renderHtML(renderType, table, fieldNames, results);
 				// Return the HTML response
 				return sendResponse(htmlResponse, 200);
 			} catch (error) {
