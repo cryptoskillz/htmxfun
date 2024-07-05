@@ -1,7 +1,7 @@
 #!/bin/bash
 
-#supported paramaters
-#delete (node buildit.js delete) this deletes everything in the _site folder
+# Supported parameters:
+# delete (node buildit.js delete) - this deletes everything in the _site folder
 
 # Function to get current time in milliseconds
 get_current_time_in_ms() {
@@ -14,7 +14,7 @@ start_time=$(get_current_time_in_ms)
 echo "Starting build script"
 
 # Execute the build script with any arguments passed to this script
-node buildit.js $1
+node buildit.js "$@"
 
 # Capture the end time in milliseconds
 end_time=$(get_current_time_in_ms)
@@ -29,9 +29,7 @@ milliseconds=$((execution_time % 1000))
 
 # Format the output string based on the calculated values
 if [ $minutes -eq 0 ]; then
-    
-        printf "Build script completed in %d.%02d seconds\n" $seconds $milliseconds
-    
+    printf "Build script completed in %d.%03d seconds\n" $seconds $milliseconds
 else
-    printf "Build script completed in %d minutes %d.%02d seconds\n" $minutes $seconds $milliseconds
+    printf "Build script completed in %d minutes %d.%03d seconds\n" $minutes $seconds $milliseconds
 fi

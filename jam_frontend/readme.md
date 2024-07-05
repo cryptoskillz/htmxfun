@@ -38,10 +38,14 @@ in \_site run a http server I use http-server https://www.npmjs.com/package/http
 parammaters
 
 delete = deletes the contents of the \_site folder
+compress = compress the html. css and js
 
 usage
 
 ./build.sh
+./build.sh delete
+./build.sh compress
+./build.sh delete compress
 This will start the server
 
 Note we could move the whole thing in a cloudflare pages and then the functions and workers would be in the same place but this is the most basic example

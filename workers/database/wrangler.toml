@@ -22,8 +22,10 @@ database_id = "b9b6406b-0c3a-4e07-aa4d-3ac5e550dd53"
 # - https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
 # Note: Use secrets to store sensitive data.
 # - https://developers.cloudflare.com/workers/configuration/secrets/
-# [vars]
-# MY_VARIABLE = "production_value"
+ [vars]
+ API_URL = "http://localhost:8787/"
+ PROJECTS_FIELDS="id,name,guid"
+ USER_FIELDS="id,name,email"
 
 # Bind the Workers AI model catalog. Run machine learning models, powered by serverless GPUs, on Cloudflare’s global network
 # Docs: https://developers.cloudflare.com/workers/wrangler/configuration/#workers-ai

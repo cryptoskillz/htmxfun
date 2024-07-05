@@ -2,12 +2,12 @@
 todo
 
 add push url for add and edit form
-add env for apiurl (also in front end)
 check if the field name has a matching look up table in the database and if it finds one render a select instead of an input
 add a cofirm modal for delete
 add validation to the add / edit form
 make edit button a button
-maybe move setfields to somewhere where it is easier to modify maybe a env var or in the toml file or could just be a const next to blackListFields that we could prase through looing for a matcch
+ressarch tailwind
+join all the js file into one
 */
 
 //blacklist fields add to this if you have fields in your database you do not want apperance in the front end
@@ -64,11 +64,11 @@ export default {
 				const dataToRender = Array.isArray(theData.results) ? theData.results : [theData];
 				//render table
 				htmlResponse = `
-         		 <table class="table delete-row-example">
+         		 <table class="table-auto delete-row-example">
             <thead>
               <tr>
-                ${fields.map((field) => `<th>${field}</th>`).join('')}
-                <td>Action</td>
+                ${fields.map((field) => `<th class="px-4 py-2">${field}</th>`).join('')}
+                <th class="px-4 py-2">Action</th>
               </tr>
             </thead>
             <tbody hx-target="closest tr" hx-swap="outerHTML">
@@ -78,9 +78,9 @@ export default {
                 <tr>
                   ${fields.map((field) => `<td>${result[field]}</td>`).join('')}
                   <td>
-					<a class="btn" href="/${tableName}/edit/?id=${result.id}">Edit</a>
-					| <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-						<button hx-delete="http://localhost:8787/${tableName}/${result.id}" 
+					<a class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" href="/${tableName}/edit/?id=${result.id}">Edit</a>
+					 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+						<button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" hx-delete="${env.API_URL}${tableName}/${result.id}" 
 								hx-trigger='confirmed'
 								onClick="Swal.fire({title: 'Delete Record',showCancelButton: true, text:'Do you want to continue?'}).then((result)=>{
 									if(result.isConfirmed){
@@ -88,7 +88,7 @@ export default {
 									} 
 								})">
 						Delete
-						</button>
+						</a>
                   </td>
                 </tr>`
 								)
@@ -111,13 +111,12 @@ export default {
 					.join('');
 				//render form
 				const formAction = renderType === 'formedit' ? 'hx-put' : 'hx-post';
-				const formUrl =
-					renderType === 'formedit' ? `http://localhost:8787/${tableName}/${formData.id}` : `http://localhost:8787/${tableName}/`;
+				const formUrl = renderType === 'formedit' ? `${env.API_URL}${tableName}/${formData.id}` : `${env.API_URL}${tableName}/`;
 				htmlResponse = `
           <form ${formAction}="${formUrl}" hx-target="this" hx-swap="outerHTML">
             ${formFields}
-            <button type="submit" class="btn">Submit</button>
-            <a class="btn" href="/${tableName}/">Cancel</a>
+            <button  class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" type="submit" class="btn">Submit</button>
+            <a  class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" href="/${tableName}/">Cancel</a>
           </form>`;
 			} else {
 				htmlResponse = `<div>Unsupported render type: ${renderType}</div>`;
@@ -150,9 +149,18 @@ export default {
 		 * @param {string} table - The name of the table.
 		 * @return {Array} An array of fields for the given table.
 		 */
-		const setFields = (table) => {
+		const setFields = (tableName) => {
+			/*
+			once we have tested the new code on production we can remove this and just use the env vars
 			if (table == 'projects') return ['id', 'name', 'guid'];
 			if (table == 'user') return ['id', 'name', 'email'];
+			*/
+			const fieldsEnvVar = `${tableName.toUpperCase()}_FIELDS`;
+			const fieldsString = env[fieldsEnvVar];
+			if (!fieldsString) {
+				throw new Error(`No field configuration found for table: ${tableName}`);
+			}
+			return fieldsString.split(',');
 		};
 
 		// Get request

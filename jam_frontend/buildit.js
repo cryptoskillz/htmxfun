@@ -2,10 +2,14 @@ const fs = require("fs");
 const path = require("path");
 const nunjucks = require("nunjucks");
 const matter = require("gray-matter");
+const { minify: htmlMinify } = require("html-minifier-terser");
+const CleanCSS = require("clean-css");
+const terser = require("terser");
 
-// Get the delete flag from command line arguments
+// Get the delete and compress flags from command line arguments
 const args = process.argv.slice(2);
 const deleteDestFolder = args.includes("delete");
+const compressAssets = args.includes("compress");
 
 // Define the source folder, includes folder, destination base folder, and assets folder
 const sourceFolder = "./_source"; // Change this to your source folder path
@@ -42,6 +46,9 @@ function deleteFolder(folderPath) {
 
 if (deleteDestFolder) {
   deleteFolder(destBaseFolder);
+  console.log(
+    `Successfully deleted the contents of the base folder: ${destBaseFolder}`
+  );
 }
 
 // Ensure the destination base folder exists
@@ -65,11 +72,50 @@ function copyDirectory(src, dest) {
   });
 }
 
-// Copy the assets directory if it exists
+// Minify CSS files
+function minifyCSS(filePath) {
+  const cssContent = fs.readFileSync(filePath, "utf8");
+  const output = new CleanCSS().minify(cssContent);
+  if (output.errors.length) {
+    console.error("CSS Minification errors:", output.errors);
+  }
+  return output.styles;
+}
+
+// Minify JavaScript files
+async function minifyJS(filePath) {
+  const jsContent = fs.readFileSync(filePath, "utf8");
+  const output = await terser.minify(jsContent);
+  if (output.error) {
+    console.error("JavaScript Minification error:", output.error);
+  }
+  return output.code;
+}
+
+// Copy and minify the assets directory if it exists
 if (fs.existsSync(assetsFolder)) {
   const destAssetsFolder = path.join(destBaseFolder, "assets");
   copyDirectory(assetsFolder, destAssetsFolder);
-  console.log(`Successfully copied assets folder to ${destAssetsFolder}`);
+
+  if (compressAssets) {
+    fs.readdirSync(destAssetsFolder).forEach(async (file) => {
+      const filePath = path.join(destAssetsFolder, file);
+      const ext = path.extname(file).toLowerCase();
+      if (ext === ".css") {
+        const minifiedCSS = minifyCSS(filePath);
+        fs.writeFileSync(filePath, minifiedCSS, "utf8");
+      } else if (ext === ".js") {
+        const minifiedJS = await minifyJS(filePath);
+        fs.writeFileSync(filePath, minifiedJS, "utf8");
+      }
+    });
+
+    console.log(
+      `Successfully compressed HTML, copied and minified assets folder to ${destAssetsFolder}`
+    );
+  } else {
+    console.log(`Successfully copied assets folder to ${destAssetsFolder}`);
+  }
 }
 
 // Read the files in the source folder
@@ -119,6 +165,16 @@ fs.readdir(sourceFolder, async (err, files) => {
           finalContent = nunjucks.renderString(layoutData, {
             ...context,
             content: renderedContent,
+          });
+        }
+
+        // Minify the final HTML content if compress flag is set
+        if (compressAssets) {
+          finalContent = await htmlMinify(finalContent, {
+            collapseWhitespace: true,
+            removeComments: true,
+            minifyCSS: true,
+            minifyJS: true,
           });
         }
 
