@@ -7,6 +7,7 @@ check if the field name has a matching look up table in the database and if it f
 add a cofirm modal for delete
 add validation to the add / edit form
 make edit button a button
+maybe move setfields to somewhere where it is easier to modify maybe a env var or in the toml file or could just be a const next to blackListFields that we could prase through looing for a matcch
 */
 
 //blacklist fields add to this if you have fields in your database you do not want apperance in the front end
