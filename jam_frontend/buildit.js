@@ -2,26 +2,25 @@ const fs = require("fs");
 const path = require("path");
 const nunjucks = require("nunjucks");
 const matter = require("gray-matter");
-const { minify: htmlMinify } = require("html-minifier-terser");
-const CleanCSS = require("clean-css");
-const terser = require("terser");
 
 // Get the delete and compress flags from command line arguments
 const args = process.argv.slice(2);
 const deleteDestFolder = args.includes("delete");
 const compressAssets = args.includes("compress");
+const environment = args.includes("prod") ? "production" : "local";
+
+// Load environment variables
+const getEnvConfig = require("./_data/env.js");
+const env = getEnvConfig(environment);
+// Console log the build type and API URL
+console.log(`Build type: ${environment}`);
+console.log(`API URL: ${env.API_URL}`);
 
 // Define the source folder, includes folder, destination base folder, and assets folder
 const sourceFolder = "./_source"; // Change this to your source folder path
 const includesFolder = "./_includes"; // Change this to your includes folder path
 const destBaseFolder = "./_site"; // Change this to your destination base folder path
 const assetsFolder = "./_source/assets"; // Change this to your assets folder path
-
-// Load environment variables from _data/env.js
-const env = require("./_data/env.js");
-
-// Load the API data function
-const api = require("./_data/api.js");
 
 // Setup Nunjucks environment
 nunjucks.configure([sourceFolder, includesFolder], {
@@ -46,9 +45,6 @@ function deleteFolder(folderPath) {
 
 if (deleteDestFolder) {
   deleteFolder(destBaseFolder);
-  console.log(
-    `Successfully deleted the contents of the base folder: ${destBaseFolder}`
-  );
 }
 
 // Ensure the destination base folder exists
@@ -72,50 +68,11 @@ function copyDirectory(src, dest) {
   });
 }
 
-// Minify CSS files
-function minifyCSS(filePath) {
-  const cssContent = fs.readFileSync(filePath, "utf8");
-  const output = new CleanCSS().minify(cssContent);
-  if (output.errors.length) {
-    console.error("CSS Minification errors:", output.errors);
-  }
-  return output.styles;
-}
-
-// Minify JavaScript files
-async function minifyJS(filePath) {
-  const jsContent = fs.readFileSync(filePath, "utf8");
-  const output = await terser.minify(jsContent);
-  if (output.error) {
-    console.error("JavaScript Minification error:", output.error);
-  }
-  return output.code;
-}
-
-// Copy and minify the assets directory if it exists
+// Copy the assets directory if it exists
 if (fs.existsSync(assetsFolder)) {
   const destAssetsFolder = path.join(destBaseFolder, "assets");
   copyDirectory(assetsFolder, destAssetsFolder);
-
-  if (compressAssets) {
-    fs.readdirSync(destAssetsFolder).forEach(async (file) => {
-      const filePath = path.join(destAssetsFolder, file);
-      const ext = path.extname(file).toLowerCase();
-      if (ext === ".css") {
-        const minifiedCSS = minifyCSS(filePath);
-        fs.writeFileSync(filePath, minifiedCSS, "utf8");
-      } else if (ext === ".js") {
-        const minifiedJS = await minifyJS(filePath);
-        fs.writeFileSync(filePath, minifiedJS, "utf8");
-      }
-    });
-
-    console.log(
-      `Successfully compressed HTML, copied and minified assets folder to ${destAssetsFolder}`
-    );
-  } else {
-    console.log(`Successfully copied assets folder to ${destAssetsFolder}`);
-  }
+  console.log(`Successfully copied assets folder to ${destAssetsFolder}`);
 }
 
 // Read the files in the source folder
@@ -124,17 +81,6 @@ fs.readdir(sourceFolder, async (err, files) => {
     console.error("Error reading the source folder:", err);
     return;
   }
-
-  // Get the API data
-  let apiData = {};
-  try {
-    apiData = await api();
-  } catch (error) {
-    console.error("Error fetching API data:", error);
-  }
-
-  // Merge env and apiData
-  const context = { ...env, ...apiData };
 
   // Process each file
   for (const file of files) {
@@ -149,7 +95,7 @@ fs.readdir(sourceFolder, async (err, files) => {
         const frontMatter = parsed.data;
 
         // Render the content with Nunjucks first
-        const renderedContent = nunjucks.renderString(content, context);
+        const renderedContent = nunjucks.renderString(content, env);
 
         let finalContent = renderedContent;
 
@@ -163,18 +109,8 @@ fs.readdir(sourceFolder, async (err, files) => {
 
           // Render the layout with the rendered content inserted
           finalContent = nunjucks.renderString(layoutData, {
-            ...context,
+            ...env,
             content: renderedContent,
-          });
-        }
-
-        // Minify the final HTML content if compress flag is set
-        if (compressAssets) {
-          finalContent = await htmlMinify(finalContent, {
-            collapseWhitespace: true,
-            removeComments: true,
-            minifyCSS: true,
-            minifyJS: true,
           });
         }
 
@@ -213,5 +149,12 @@ fs.readdir(sourceFolder, async (err, files) => {
         console.error("Error processing the Nunjucks file:", err);
       }
     }
+  }
+
+  // Optional: Compress assets if the compress flag is set
+  if (compressAssets) {
+    const compress = require("compression-library"); // Replace with your compression tool
+    compress(assetsFolder);
+    console.log("Assets compressed successfully");
   }
 });

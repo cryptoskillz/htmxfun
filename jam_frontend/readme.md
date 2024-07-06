@@ -39,6 +39,8 @@ parammaters
 
 delete = deletes the contents of the \_site folder
 compress = compress the html. css and js
+local = get the local vars from env.js
+prod = get production vars from env.js
 
 usage
 

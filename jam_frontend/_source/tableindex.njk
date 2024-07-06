@@ -4,7 +4,7 @@ layout: layout
 title: "Table Page"
 ---
 
-<div id="table" hx-get="http://localhost:8787/" hx-trigger="load" hx-vals="">
+<div id="table" hx-get="{{ API_URL }}" hx-trigger="load" hx-vals="">
   <img
     alt="Result loading..."
     class="htmx-indicator"
@@ -13,9 +13,5 @@ title: "Table Page"
   />
 </div>
 <div>
-  <a
-    class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-    href="add/?id=0"
-    >Add Record</a
-  >
+  <a class="pure-button" href="add/?id=0">Add Record</a>
 </div>

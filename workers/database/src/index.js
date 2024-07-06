@@ -3,10 +3,8 @@ todo
 
 add push url for add and edit form
 check if the field name has a matching look up table in the database and if it finds one render a select instead of an input
-add a cofirm modal for delete
 add validation to the add / edit form
 make edit button a button
-ressarch tailwind
 join all the js file into one
 */
 
@@ -64,7 +62,7 @@ export default {
 				const dataToRender = Array.isArray(theData.results) ? theData.results : [theData];
 				//render table
 				htmlResponse = `
-         		 <table class="table-auto delete-row-example">
+         		 <table class="pure-table">
             <thead>
               <tr>
                 ${fields.map((field) => `<th class="px-4 py-2">${field}</th>`).join('')}
@@ -78,9 +76,9 @@ export default {
                 <tr>
                   ${fields.map((field) => `<td>${result[field]}</td>`).join('')}
                   <td>
-					<a class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" href="/${tableName}/edit/?id=${result.id}">Edit</a>
+					<a class="pure-button" href="/${tableName}/edit/?id=${result.id}">Edit</a>
 					 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-						<button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" hx-delete="${env.API_URL}${tableName}/${result.id}" 
+						<button class="pure-button" hx-delete="${env.API_URL}${tableName}/${result.id}" 
 								hx-trigger='confirmed'
 								onClick="Swal.fire({title: 'Delete Record',showCancelButton: true, text:'Do you want to continue?'}).then((result)=>{
 									if(result.isConfirmed){
@@ -113,10 +111,10 @@ export default {
 				const formAction = renderType === 'formedit' ? 'hx-put' : 'hx-post';
 				const formUrl = renderType === 'formedit' ? `${env.API_URL}${tableName}/${formData.id}` : `${env.API_URL}${tableName}/`;
 				htmlResponse = `
-          <form ${formAction}="${formUrl}" hx-target="this" hx-swap="outerHTML">
+          <form ${formAction}="${formUrl}" class="pure-form pure-form-stacked" hx-target="this" hx-swap="outerHTML">
             ${formFields}
-            <button  class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" type="submit" class="btn">Submit</button>
-            <a  class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" href="/${tableName}/">Cancel</a>
+            <button  class="pure-button" type="submit" class="btn">Submit</button>
+            <a  class="pure-button" href="/${tableName}/">Cancel</a>
           </form>`;
 			} else {
 				htmlResponse = `<div>Unsupported render type: ${renderType}</div>`;
