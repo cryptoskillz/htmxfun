@@ -3,8 +3,9 @@ todo
 
 check if the field name has a matching look up table in the database and if it finds one render a select instead of an input
 add validation to the add / edit form
+add lazy loading of the table 
 join all the js file into one
-fix the target on record delete
+
 */
 
 //blacklist fields add to this if you have fields in your database you do not want apperance in the front end
@@ -79,6 +80,8 @@ export default {
 					 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 						<button class="pure-button" hx-delete="${env.API_URL}${tableName}/${result.id}" 
 								hx-trigger='confirmed'
+								hx-target="#responseText"
+								hx-swap="innerHTML"
 								onClick="Swal.fire({title: 'Delete Record',showCancelButton: true, text:'Do you want to continue?'}).then((result)=>{
 									if(result.isConfirmed){
 									htmx.trigger(this, 'confirmed');  

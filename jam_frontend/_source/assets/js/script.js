@@ -16,6 +16,21 @@ it may not be added yet or we may be dumb.  We look back and try to fix this lat
 document.addEventListener("htmx:afterRequest", function (event) {
   // Check if the response is JSON
   let responseData;
+  //console.log(event.detail.xhr.responseText);
+
+  if (event.detail.xhr.responseText === "Record deleted successfully") {
+    const targetRow = event.target.closest("tr");
+    if (targetRow) {
+      targetRow.remove();
+    }
+    setTimeout(function () {
+      const tableElement = document.getElementById("responseText");
+      //set the message
+      tableElement.textContent = "";
+    }, 1000); // 1000 milliseconds = 1 second
+    return;
+  }
+
   try {
     responseData = JSON.parse(event.detail.xhr.response);
   } catch (error) {
