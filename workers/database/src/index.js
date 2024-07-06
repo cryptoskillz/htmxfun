@@ -1,11 +1,10 @@
 /*
 todo
 
-add push url for add and edit form
 check if the field name has a matching look up table in the database and if it finds one render a select instead of an input
 add validation to the add / edit form
-make edit button a button
 join all the js file into one
+fix the target on record delete
 */
 
 //blacklist fields add to this if you have fields in your database you do not want apperance in the front end
@@ -231,11 +230,10 @@ export default {
 				//get the table name
 				const segments = url.pathname.split('/').filter((segment) => segment.length > 0);
 				const tableName = segments[0];
-				let id;
+				const id = segments[1];
+
 				//run delete
 				if (request.method === 'DELETE') {
-					//get the id
-					id = segments[1];
 					//check if the id is empty
 					if (!id) {
 						return sendResponse('Missing ID for deletion', 400);
@@ -246,9 +244,6 @@ export default {
 					const result = await stmt.run();
 					//send the response
 					return sendResponse('Record deleted successfully', 200);
-				} else {
-					//set the id from segement 2 as it we are in add/edit
-					id = segments[2];
 				}
 				//set the content type
 				const contentType = request.headers.get('content-type');
@@ -258,6 +253,7 @@ export default {
 				const fields = Object.keys(body).filter((key) => !blackListFields.includes(key));
 				//set the query
 				let sql = '';
+				let updateTextType = 'added';
 				//check the method
 				if (request.method === 'POST') {
 					//insert the record
@@ -265,6 +261,7 @@ export default {
 					const valueList = fields.map((field) => `'${body[field]}'`).join(', ');
 					sql = `INSERT INTO ${tableName} (${fieldList}) VALUES (${valueList})`;
 				} else if (request.method === 'PUT') {
+					updateTextType = 'updated';
 					//update the record
 					const setClause = fields
 						.map((field) => {
@@ -273,12 +270,19 @@ export default {
 						})
 						.join(', ');
 					sql = `UPDATE ${tableName} SET ${setClause} WHERE id = ${id}`;
+					console.log(segments);
+					console.log(sql);
 				}
 				//run the query
 				const stmt = env.DB.prepare(sql);
 				const result = await stmt.run();
 				//send response
-				return sendResponse('Operation successful', 200);
+				const responseObj = {
+					message: `Record ${updateTextType} successfully`,
+					tableName: tableName,
+					statusText: 'OK',
+				};
+				return sendResponse(JSON.stringify(responseObj), 200, 'application/json'); //return sendResponse(responseObj, 200, 'application/json');
 			} catch (error) {
 				console.error('Error handling request:', error);
 				return sendResponse('Internal Server Error', 500);
