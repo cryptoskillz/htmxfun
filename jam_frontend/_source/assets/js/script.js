@@ -1,6 +1,3 @@
-// Call the function when the document is ready
-//document.addEventListener("DOMContentLoaded", getURLParameter);
-
 // Function to execute when document is ready
 let whenDocumentReady = (f) => {
   /in/.test(document.readyState)
@@ -27,7 +24,12 @@ document.addEventListener("htmx:afterRequest", function (event) {
     return;
   }
   // Check if the response contains the expected properties
-  if (responseData && responseData.message && responseData.tableName) {
+  if (
+    responseData &&
+    responseData.message &&
+    responseData.tableName &&
+    responseData.statusText
+  ) {
     // Check if record was added or updated successfully
     if (responseData.statusText === "OK") {
       // Update the table element with the message
