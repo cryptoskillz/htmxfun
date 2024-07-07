@@ -56,19 +56,21 @@ export default {
 		 *
 		 * @param {string} tableName - The name of the table.
 		 * @return {Array<Object>} An array of field objects.
+		 *
+		 * extenedType : ie guid is used to preform extra validation that falls outside of the standard input type scope
 		 */
 		const setFields = (tableName) => {
 			if (tableName == 'projects')
 				return [
-					{ name: 'id', value: '', placeHolder: 'Enter ID', inputType: 'integer', required: true, disabled: false },
-					{ name: 'name', value: '', placeHolder: 'Enter Name', inputType: 'text', required: false, disabled: false },
-					{ name: 'guid', value: '', placeHolder: 'Enter GUID', inputType: 'guid', required: true, disabled: false },
+					{ name: 'id', value: '', placeHolder: 'Enter ID', inputType: 'integer', extendedType: '', required: true, disabled: false },
+					{ name: 'name', value: '', placeHolder: 'Enter Name', inputType: 'text', extendedType: '', required: false, disabled: false },
+					{ name: 'guid', value: '', placeHolder: 'Enter GUID', inputType: 'text', extendedType: 'guid', required: true, disabled: false },
 				];
 			if (tableName == 'user')
 				return [
-					{ name: 'id', value: '', placeHolder: 'Enter ID', inputType: 'number', required: true, disabled: false },
-					{ name: 'name', value: '', placeHolder: 'Enter Name', inputType: 'text', required: true, disabled: false },
-					{ name: 'email', value: '', placeHolder: 'Enter Email', inputType: 'email', required: true, disabled: false },
+					{ name: 'id', value: '', placeHolder: 'Enter ID', inputType: 'number', extendedType: '', required: true, disabled: false },
+					{ name: 'name', value: '', placeHolder: 'Enter Name', inputType: 'text', extendedType: '', required: true, disabled: false },
+					{ name: 'email', value: '', placeHolder: 'Enter Email', inputType: 'email', extendedType: '', required: true, disabled: false },
 				];
 		};
 
