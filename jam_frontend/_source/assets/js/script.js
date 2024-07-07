@@ -16,8 +16,6 @@ it may not be added yet or we may be dumb.  We look back and try to fix this lat
 document.addEventListener("htmx:afterRequest", function (event) {
   // Check if the response is JSON
   let responseData;
-  //console.log(event.detail.xhr.responseText);
-
   if (event.detail.xhr.responseText === "Record deleted successfully") {
     const targetRow = event.target.closest("tr");
     if (targetRow) {
@@ -35,7 +33,6 @@ document.addEventListener("htmx:afterRequest", function (event) {
     responseData = JSON.parse(event.detail.xhr.response);
   } catch (error) {
     // If parsing fails, this will be the server senidng down some html for the htmx to use as the response
-    //console.log("Response is not JSON:", event.detail.xhr.response);
     return;
   }
   // Check if the response contains the expected properties

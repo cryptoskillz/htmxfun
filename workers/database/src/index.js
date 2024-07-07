@@ -62,28 +62,116 @@ export default {
 		const setFields = (tableName) => {
 			if (tableName == 'projects')
 				return [
-					{ name: 'id', value: '', placeHolder: 'Enter ID', inputType: 'integer', extendedType: '', required: true, disabled: false },
-					{ name: 'name', value: '', placeHolder: 'Enter Name', inputType: 'text', extendedType: '', required: false, disabled: false },
-					{ name: 'guid', value: '', placeHolder: 'Enter GUID', inputType: 'text', extendedType: 'guid', required: true, disabled: false },
+					{
+						name: 'id',
+						value: '',
+						placeHolder: 'Enter ID',
+						inputType: 'integer',
+						extendedType: '',
+						required: true,
+						disabled: false,
+						allowEdit: true,
+					},
+					{
+						name: 'name',
+						value: '',
+						placeHolder: 'Enter Name',
+						inputType: 'select',
+						extendedType: '',
+						required: false,
+						disabled: false,
+						allowEdit: true,
+					},
+					{
+						name: 'guid',
+						value: '',
+						placeHolder: 'Enter GUID',
+						inputType: 'text',
+						extendedType: 'guid',
+						required: true,
+						disabled: false,
+						allowEdit: true,
+					},
 				];
 			if (tableName == 'user')
 				return [
-					{ name: 'id', value: '', placeHolder: 'Enter ID', inputType: 'number', extendedType: '', required: true, disabled: false },
-					{ name: 'name', value: '', placeHolder: 'Enter Name', inputType: 'text', extendedType: '', required: true, disabled: false },
-					{ name: 'email', value: '', placeHolder: 'Enter Email', inputType: 'email', extendedType: '', required: true, disabled: false },
+					{
+						name: 'id',
+						value: '',
+						placeHolder: 'Enter ID',
+						inputType: 'number',
+						extendedType: '',
+						required: true,
+						disabled: false,
+						allowEdit: true,
+					},
+					{
+						name: 'name',
+						value: '',
+						placeHolder: 'Enter Name',
+						inputType: 'select',
+						extendedType: '',
+						required: true,
+						disabled: false,
+						allowEdit: true,
+					},
+					{
+						name: 'email',
+						value: '',
+						placeHolder: 'Enter Email',
+						inputType: 'email',
+						extendedType: '',
+						required: true,
+						disabled: false,
+						allowEdit: true,
+					},
+					{
+						name: 'username',
+						value: '',
+						placeHolder: '',
+						inputType: 'text',
+						extendedType: '',
+						required: false,
+						disabled: true,
+						allowEdit: false,
+					},
 				];
 		};
 
 		/**
-		 * Retrieves lookup data based on the provided data.
+		 * Retrieves lookup data based on the provided table name, field name, and override bound to table flag.
 		 *
-		 * @param {Object} data - The data used to retrieve the lookup data.
-		 * @return {Promise<Object>} A Promise that resolves to an empty object.
-		 *
-		 * todo: to add the logic to check if the table exits in the database, we could have this as look up arrays like setfields
+		 * @param {string} tableName - The name of the table.
+		 * @param {string} fieldName - The name of the field.
+		 * @param {boolean} [overRideBoundToTable=false] - Flag to override the bound to table.
+		 * @return {Promise<Array<string>>} A Promise that resolves to an array of data.
 		 */
-		const getLookupData = async (data) => {
-			return {};
+		const getLookupData = async (tableName, fieldName, overRideBoundToTable = false) => {
+			const lookupData = [
+				{
+					fieldName: 'name',
+					boundToTable: 'projects', // Set to specific table name if bound, otherwise false
+					data: ['chris', 'dave', 'eric'],
+				},
+			];
+
+			// Find the matching entries in lookupData based on fieldName and boundToTable
+			const matchingEntries = lookupData.filter(
+				(entry) => entry.fieldName === fieldName && (entry.boundToTable === false || entry.boundToTable === tableName)
+			);
+
+			// Extract data from matching entries
+			let data = matchingEntries.map((entry) => entry.data).flat();
+
+			// If no data found and boundToTable is set, use boundToTable data as fallback if overRideBoundToTable is true
+			if (data.length === 0 && overRideBoundToTable === true) {
+				const fallbackEntry = lookupData.find((entry) => entry.fieldName === fieldName && entry.boundToTable != false);
+				if (fallbackEntry) {
+					data = fallbackEntry.data;
+				}
+			}
+
+			return data;
 		};
 
 		/**
@@ -176,25 +264,34 @@ export default {
 						.filter((field) => !blackListFields.includes(field.name))
 						.map(async (field) => {
 							//get the lookup data
-							const lookupData = await getLookupData(field.name);
+
+							let lookupData = [];
+							if (field.inputType == 'select') {
+								lookupData = await getLookupData(tableName, field.name, false);
+							}
 							//check if the field is a lookup field
 							if (lookupData.length > 0) {
 								return `
-                        <div>
-                            <label>${field.required ? '*' : ''} ${field.name.charAt(0).toUpperCase() + field.name.slice(1)}</label>
-                            <select name="${field.name}" ${field.required ? 'required' : ''} ${field.disabled ? 'disabled' : ''}>
-                                ${lookupData
-																	.map(
-																		(item) =>
-																			`<option value="${item.id}" ${formData[field.name] == item.id ? 'selected' : ''}>${
-																				item.name
-																			}</option>`
-																	)
-																	.join('')}
-                            </select>
-                        </div>
-                    `;
+									<div>
+										<label>${field.required ? '*' : ''} ${field.name.charAt(0).toUpperCase() + field.name.slice(1)}</label>
+										<select name="${field.name}" ${field.required ? 'required' : ''} ${field.disabled ? 'disabled' : ''}>
+											${lookupData
+												.map(
+													(item) =>
+														`<option value="${item}" ${formData[field.name] === item ? 'selected' : ''}>
+														${item}
+													</option>`
+												)
+												.join('')}
+										</select>
+									</div>
+								`;
 							} else {
+								//check if its a select as it could have above due to to not finding any data in which case we should change its type back to text and warn in the console
+								console.log('We made an assumpation: changed type from select to text');
+								if (field.inputType == 'select') {
+									field.inputType = 'text';
+								}
 								//render the input field if it is not a lookup field
 								return `
                         <div>
@@ -204,7 +301,7 @@ export default {
 								}"  
                                 ${field.placeHolder ? 'placeholder="' + field.placeHolder + '"' : ''} 
                                 ${field.required ? 'required' : ''} 
-                                ${field.disabled ? 'disabled' : ''}
+                        		${renderType === 'formedit' && field.allowEdit === false ? 'disabled' : ''}
                             />
                         </div>
                     `;
