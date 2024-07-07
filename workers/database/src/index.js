@@ -1,22 +1,13 @@
 /*
 todo
 
-check if the field name has a matching look up table in the database and if it finds one render a select instead of an input
-add validation to the add / edit form
-join all the js file into one
-
-validation flow 
-
-
-remove validate worker
-add validate to the post / put event
-
+join all the js file into one (or leave to cloudflare / ci)
+add jwt login and end point
 
 */
 
 //blacklist fields add to this if you have fields in your database you do not want apperance in the front end
 //note : during the insert these will have to be added so we should parse it and put in correct vairables.
-//note : this may no longer be required as we can disable the fields we no longer care about but i think it will keep it as removing things like isDeleted still makes sense
 const blackListFields = [
 	'id',
 	'created_at',
@@ -51,6 +42,19 @@ export default {
 			});
 		}
 
+		// Function to generate a UUID v4
+		const generateUUID = () => {
+			// Create an array to hold the random values
+			let array = new Uint8Array(16);
+			crypto.getRandomValues(array);
+			// Set the version to 4 (random)
+			array[6] = (array[6] & 0x0f) | 0x40;
+			array[8] = (array[8] & 0x3f) | 0x80;
+			// Convert the array to a UUID string
+			const hex = Array.from(array, (byte) => byte.toString(16).padStart(2, '0')).join('');
+			return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+		};
+
 		/**
 		 * Returns an array of field objects based on the given table name.
 		 *
@@ -64,6 +68,8 @@ export default {
 		 *	value: the initial value of the field
 		 *	placeHolder: the placeholder text for the field
 		 *	inputType: the type of input (e.g., integer, text, select)
+		 *	minLength: the minimum length of the field
+		 *	maxLength: the maximum length of the field
 		 *	extendedType: additional type for custom validation
 		 *	required: indicates if the field is required
 		 *	disabled: indicates if the field is disabled
@@ -73,34 +79,40 @@ export default {
 			if (tableName == 'projects')
 				return [
 					{
-						name: 'id', // field name
-						value: '', // field value
-						placeHolder: 'Enter ID', // placeholder
-						inputType: 'integer', // input type
-						extendedType: '', // extended type used for custom validation
-						required: true, // required field
-						disabled: false, // disabled field
-						allowEdit: true, //	allow edit field (if the field is not disabled during add you may not want to allow your users to edit it ie email)
+						name: 'id',
+						value: '',
+						placeHolder: 'Enter ID',
+						inputType: 'integer',
+						minLength: 0,
+						maxLength: 0,
+						extendedType: '',
+						required: true,
+						disableAdd: false,
+						disableEdit: false,
 					},
 					{
 						name: 'name',
 						value: '',
 						placeHolder: 'Enter Name',
-						inputType: 'select',
+						inputType: 'text',
+						minLength: 0,
+						maxLength: 0,
 						extendedType: '',
 						required: false,
-						disabled: false,
-						allowEdit: true,
+						disableAdd: false,
+						disableEdit: false,
 					},
 					{
 						name: 'guid',
 						value: '',
-						placeHolder: 'Enter GUID',
+						placeHolder: '',
 						inputType: 'text',
+						minLength: 0,
+						maxLength: 0,
 						extendedType: 'guid',
-						required: true,
-						disabled: false,
-						allowEdit: true,
+						required: false,
+						disableAdd: true,
+						disableEdit: true,
 					},
 				];
 			if (tableName == 'user')
@@ -110,40 +122,48 @@ export default {
 						value: '',
 						placeHolder: 'Enter ID',
 						inputType: 'number',
+						minLength: 0,
+						maxLength: 0,
 						extendedType: '',
 						required: true,
-						disabled: false,
-						allowEdit: true,
+						disableAdd: false,
+						disableEdit: false,
 					},
 					{
 						name: 'name',
 						value: '',
 						placeHolder: 'Enter Name',
 						inputType: 'select',
+						minLength: 5,
+						maxLength: 10,
 						extendedType: '',
 						required: true,
-						disabled: false,
-						allowEdit: true,
+						disableAdd: false,
+						disableEdit: false,
 					},
 					{
 						name: 'email',
 						value: '',
 						placeHolder: 'Enter Email',
 						inputType: 'email',
+						minLength: 0,
+						maxLength: 0,
 						extendedType: '',
 						required: true,
-						disabled: false,
-						allowEdit: true,
+						disableAdd: false,
+						disableEdit: false,
 					},
 					{
 						name: 'username',
 						value: '',
 						placeHolder: '',
 						inputType: 'text',
+						minLength: 0,
+						maxLength: 0,
 						extendedType: '',
 						required: false,
-						disabled: true,
-						allowEdit: false,
+						disableAdd: false,
+						disableEdit: false,
 					},
 				];
 		};
@@ -193,11 +213,39 @@ export default {
 		 * todo: to add the logic to check if the table exits in the database, we could have this as look up arrays like setfields
 		 */
 		const validateData = (data) => {
-			// Add your validation logic here
+			// This is whwew you would put your validation logic i am too lazy to add it at this moment in time if you want to add it have at ye.
 			return true;
 		};
 
 		/**
+		 * Validates and generates extended data based on the table name and body.
+		 *
+		 * @param {string} tableName - The name of the table.
+		 * @return {Array<Object>} An array of extended data objects.
+		 */
+		const validateExtendedTypes = (tableName) => {
+			//get the fields for the table
+			const fields = setFields(tableName);
+			//filter the fields for extended types
+			const extendedFields = fields.filter((field) => field.extendedType && !blackListFields.includes(field.name));
+			//generate the extended data
+			const extendedData = [];
+			//loop through the extended fields
+			extendedFields.forEach((field) => {
+				if (field.extendedType === 'guid') {
+					extendedData.push({
+						name: field.name,
+						value: generateUUID(),
+					});
+				} else {
+					// Handle other extended types if needed
+				}
+			});
+			//return the extended data
+			return extendedData;
+		};
+
+		/*
 		 * Creates a response object with the provided message, status code, and type.
 		 *
 		 * @param {type} theMessage - The message to include in the response.
@@ -226,9 +274,10 @@ export default {
 		 */
 		const renderHTML = async (renderType, tableName, fields, theData) => {
 			let htmlResponse = '';
-			//check the render type
+
+			// Check the render type
 			if (renderType === 'table') {
-				//render the table
+				// Render the table
 				const dataToRender = Array.isArray(theData.results) ? theData.results : [theData];
 				htmlResponse = `
             <table class="pure-table">
@@ -265,63 +314,62 @@ export default {
 											.join('')}
                 </tbody>
             </table>`;
-				//render the form
 			} else if (renderType === 'formedit' || renderType === 'formadd') {
 				const formData = renderType === 'formedit' ? (Array.isArray(theData.results) ? theData.results[0] : theData) : {};
-				//render the fields
+
+				// Render the fields
 				const formFields = await Promise.all(
 					fields
 						.filter((field) => !blackListFields.includes(field.name))
 						.map(async (field) => {
-							//get the lookup data
-
 							let lookupData = [];
-							if (field.inputType == 'select') {
+							if (field.inputType === 'select') {
 								lookupData = await getLookupData(tableName, field.name, false);
 							}
-							//check if the field is a lookup field
+
 							if (lookupData.length > 0) {
 								return `
-									<div>
-										<label>${field.required ? '*' : ''} ${field.name.charAt(0).toUpperCase() + field.name.slice(1)}</label>
-										<select name="${field.name}" ${field.required ? 'required' : ''} ${field.disabled ? 'disabled' : ''}>
-											${lookupData
-												.map(
-													(item) =>
-														`<option value="${item}" ${formData[field.name] === item ? 'selected' : ''}>
-														${item}
-													</option>`
-												)
-												.join('')}
-										</select>
-									</div>
-								`;
+                            <div>
+                                <label>${field.required ? '*' : ''} ${field.name.charAt(0).toUpperCase() + field.name.slice(1)}</label>
+                                <select name="${field.name}" ${field.required ? 'required' : ''} ${field.disabled ? 'disabled' : ''}>
+                                    ${lookupData
+																			.map(
+																				(item) =>
+																					`<option value="${item}" ${formData[field.name] === item ? 'selected' : ''}>
+                                                ${item}
+                                            </option>`
+																			)
+																			.join('')}
+                                </select>
+                            </div>
+                        `;
 							} else {
-								//check if its a select as it could have above due to to not finding any data in which case we should change its type back to text and warn in the console
-								//it is not ideal as we never really want a select to return no data so the dev should fix it but at least it does not break the form the user
-								console.log('We made an assumpation: changed type from select to text');
-								if (field.inputType == 'select') {
+								// Fallback for select fields with no data
+								if (field.inputType === 'select') {
+									console.warn(`Field ${field.name} changed from select to text due to no data.`);
 									field.inputType = 'text';
 								}
-								//render the input field if it is not a lookup field
+
 								return `
-                        <div>
-                            <label>${field.required ? '*' : ''} ${field.name.charAt(0).toUpperCase() + field.name.slice(1)}</label>
-                            <input type="${field.inputType === 'integer' ? 'number' : field.inputType}" name="${field.name}" value="${
+                            <div>
+                                <label>${field.required ? '*' : ''} ${field.name.charAt(0).toUpperCase() + field.name.slice(1)}</label>
+                                <input type="${field.inputType === 'integer' ? 'number' : field.inputType}" name="${field.name}" value="${
 									formData[field.name] || ''
 								}"  
-                                ${field.placeHolder ? 'placeholder="' + field.placeHolder + '"' : ''} 
-                                ${field.required ? 'required' : ''} 
-                        		${renderType === 'formedit' && field.allowEdit === false ? 'disabled' : ''}
-                            />
-                        </div>
-                    `;
+                                    ${field.placeHolder ? 'placeholder="' + field.placeHolder + '"' : ''} 
+                                    ${field.required ? 'required' : ''} 
+                                    ${field.minLength ? 'minlength="' + field.minLength + '"' : ''} 
+                                    ${field.maxLength ? 'maxlength="' + field.maxLength + '"' : ''} 
+                                    ${renderType === 'formadd' && field.disableAdd === true ? 'disabled' : ''}
+                                    ${renderType === 'formedit' && field.disableEdit === true ? 'disabled' : ''}
+                                />
+                            </div>
+                        `;
 							}
 						})
 				);
-				//set the post or put action
+
 				const formAction = renderType === 'formedit' ? 'hx-put' : 'hx-post';
-				//render the submit and cancel buttons
 				const formUrl = renderType === 'formedit' ? `${env.API_URL}${tableName}/${formData.id}` : `${env.API_URL}${tableName}/`;
 				htmlResponse = `
             <form ${formAction}="${formUrl}" class="pure-form pure-form-stacked" hx-target="this" hx-swap="outerHTML">
@@ -335,6 +383,7 @@ export default {
 
 			return htmlResponse;
 		};
+
 		//get the fields for the table
 		if (request.method === 'GET') {
 			//get the query params
@@ -427,10 +476,27 @@ export default {
 				let updateTextType = 'added';
 				//check if its a post
 				if (request.method === 'POST') {
-					//insert the record
-					const fieldList = fields.join(', ');
-					const valueList = fields.map((field) => `'${body[field]}'`).join(', ');
+					//get the extended data
+					const extendedData = validateExtendedTypes(tableName, body);
+					// Construct fields excluding blacklisted fields
+					const fields = setFields(tableName).filter((field) => !blackListFields.includes(field.name));
+					// Construct field list
+					const fieldList = fields.map((field) => field.name).join(', ');
+					// Construct value list
+					const valueList = fields
+						.map((field) => {
+							if (extendedData.some((data) => data.name === field.name)) {
+								return `'${extendedData.find((data) => data.name === field.name).value}'`;
+							} else {
+								// Handle regular fields from body or set defaults as needed
+								const fieldValue = body[field.name] !== undefined ? `'${body[field.name]}'` : 'NULL';
+								return fieldValue;
+							}
+						})
+						.join(', ');
+					// Build SQL statement
 					sql = `INSERT INTO ${tableName} (${fieldList}) VALUES (${valueList})`;
+					console.log('SQL Statement:', sql);
 				} else if (request.method === 'PUT') {
 					//update the record
 					updateTextType = 'updated';
