@@ -57,20 +57,30 @@ export default {
 		 * @param {string} tableName - The name of the table.
 		 * @return {Array<Object>} An array of field objects.
 		 *
-		 * extenedType : ie guid is used to preform extra validation that falls outside of the standard input type scope
+		 *
+		 *	Field configuration object. It defines characteristics of a field:
+		 *
+		 *	name: the name of the field
+		 *	value: the initial value of the field
+		 *	placeHolder: the placeholder text for the field
+		 *	inputType: the type of input (e.g., integer, text, select)
+		 *	extendedType: additional type for custom validation
+		 *	required: indicates if the field is required
+		 *	disabled: indicates if the field is disabled
+		 *	allowEdit: specifies if the field is editable
 		 */
 		const setFields = (tableName) => {
 			if (tableName == 'projects')
 				return [
 					{
-						name: 'id',
-						value: '',
-						placeHolder: 'Enter ID',
-						inputType: 'integer',
-						extendedType: '',
-						required: true,
-						disabled: false,
-						allowEdit: true,
+						name: 'id', // field name
+						value: '', // field value
+						placeHolder: 'Enter ID', // placeholder
+						inputType: 'integer', // input type
+						extendedType: '', // extended type used for custom validation
+						required: true, // required field
+						disabled: false, // disabled field
+						allowEdit: true, //	allow edit field (if the field is not disabled during add you may not want to allow your users to edit it ie email)
 					},
 					{
 						name: 'name',
@@ -288,6 +298,7 @@ export default {
 								`;
 							} else {
 								//check if its a select as it could have above due to to not finding any data in which case we should change its type back to text and warn in the console
+								//it is not ideal as we never really want a select to return no data so the dev should fix it but at least it does not break the form the user
 								console.log('We made an assumpation: changed type from select to text');
 								if (field.inputType == 'select') {
 									field.inputType = 'text';
