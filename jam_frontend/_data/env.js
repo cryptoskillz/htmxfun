@@ -10,11 +10,13 @@ const envConfigs = {
     ...commonConfig,
     ENVIRONMENT: "local",
     API_URL: "http://localhost:8787/",
+    API_VALIDATE_URL: "http://localhost:8788/",
   },
   production: {
     ...commonConfig,
     ENVIRONMENT: "production",
     API_URL: "https://yourproductionapi.com/api",
+    API_VALIDATE_URL: "http://localhost:8788/",
   },
 };
 

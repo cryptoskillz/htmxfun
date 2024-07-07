@@ -3,15 +3,22 @@ todo
 
 check if the field name has a matching look up table in the database and if it finds one render a select instead of an input
 add validation to the add / edit form
-add lazy loading of the table 
 join all the js file into one
+
+validation flow 
+
+
+remove validate worker
+add validate to the post / put event
+
 
 */
 
 //blacklist fields add to this if you have fields in your database you do not want apperance in the front end
+//note : during the insert these will have to be added so we should parse it and put in correct vairables.
+//note : this may no longer be required as we can disable the fields we no longer care about but i think it will keep it as removing things like isDeleted still makes sense
 const blackListFields = [
 	'id',
-	'guid',
 	'created_at',
 	'updated_at',
 	'deleted_at',
@@ -28,8 +35,8 @@ export default {
 	 * Fetches data based on the request method and returns a response.
 	 *
 	 * @param {Request} request - The request object.
-	 * @param {object} env - The environment object.
-	 * @param {object} ctx - The context object.
+	 * @param {Object} env - The environment object.
+	 * @param {Object} ctx - The context object.
 	 * @return {Promise<Response>} The response object.
 	 */
 	async fetch(request, env, ctx) {
@@ -45,93 +52,58 @@ export default {
 		}
 
 		/**
-		 * Renders HTML based on the renderType, tableName, fields, and theData.
+		 * Returns an array of field objects based on the given table name.
 		 *
-		 * @param {string} renderType - The type of rendering. Can be 'table', 'formedit', or 'formadd'.
 		 * @param {string} tableName - The name of the table.
-		 * @param {Array} fields - An array of field names.
-		 * @param {Object} theData - The data to be rendered.
-		 * @return {string} The rendered HTML.
+		 * @return {Array<Object>} An array of field objects.
 		 */
-		const renderHTML = (renderType, tableName, fields, theData) => {
-			//construct html reaponse
-			let htmlResponse = '';
-			//renderType can be table, formedit, formadd
-			if (renderType === 'table') {
-				//render data
-				const dataToRender = Array.isArray(theData.results) ? theData.results : [theData];
-				//render table
-				htmlResponse = `
-         		 <table class="pure-table">
-            <thead>
-              <tr>
-                ${fields.map((field) => `<th class="px-4 py-2">${field}</th>`).join('')}
-                <th class="px-4 py-2">Action</th>
-              </tr>
-            </thead>
-            <tbody hx-target="closest tr" hx-swap="outerHTML">
-              ${dataToRender
-								.map(
-									(result) => `
-                <tr>
-                  ${fields.map((field) => `<td>${result[field]}</td>`).join('')}
-                  <td>
-					<a class="pure-button" href="/${tableName}/edit/?id=${result.id}">Edit</a>
-					 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-						<button class="pure-button" hx-delete="${env.API_URL}${tableName}/${result.id}" 
-								hx-trigger='confirmed'
-								hx-target="#responseText"
-								hx-swap="innerHTML"
-								onClick="Swal.fire({title: 'Delete Record',showCancelButton: true, text:'Do you want to continue?'}).then((result)=>{
-									if(result.isConfirmed){
-									htmx.trigger(this, 'confirmed');  
-									} 
-								})">
-						Delete
-						</a>
-                  </td>
-                </tr>`
-								)
-								.join('')}
-            </tbody>
-          </table>`;
-				//render form
-			} else if ((renderType === 'formedit' || renderType === 'formadd') && theData) {
-				const formData = renderType === 'formedit' ? (Array.isArray(theData.results) ? theData.results[0] : theData) : {};
-
-				const formFields = (renderType === 'formedit' ? Object.keys(formData) : theData.results.map((field) => field.name))
-					.filter((key) => !blackListFields.includes(key))
-					.map(
-						(key) => `
-            <div class="form-group">
-              <label>${key.charAt(0).toUpperCase() + key.slice(1)}</label>
-              <input type="text" name="${key}" value="${formData[key] || ''}" />
-            </div>`
-					)
-					.join('');
-				//render form
-				const formAction = renderType === 'formedit' ? 'hx-put' : 'hx-post';
-				const formUrl = renderType === 'formedit' ? `${env.API_URL}${tableName}/${formData.id}` : `${env.API_URL}${tableName}/`;
-				htmlResponse = `
-          <form ${formAction}="${formUrl}" class="pure-form pure-form-stacked" hx-target="this" hx-swap="outerHTML">
-            ${formFields}
-            <button  class="pure-button" type="submit" class="btn">Submit</button>
-            <a  class="pure-button" href="/${tableName}/">Cancel</a>
-          </form>`;
-			} else {
-				htmlResponse = `<div>Unsupported render type: ${renderType}</div>`;
-			}
-
-			return htmlResponse;
+		const setFields = (tableName) => {
+			if (tableName == 'projects')
+				return [
+					{ name: 'id', value: '', placeHolder: 'Enter ID', inputType: 'integer', required: true, disabled: false },
+					{ name: 'name', value: '', placeHolder: 'Enter Name', inputType: 'text', required: false, disabled: false },
+					{ name: 'guid', value: '', placeHolder: 'Enter GUID', inputType: 'guid', required: true, disabled: false },
+				];
+			if (tableName == 'user')
+				return [
+					{ name: 'id', value: '', placeHolder: 'Enter ID', inputType: 'number', required: true, disabled: false },
+					{ name: 'name', value: '', placeHolder: 'Enter Name', inputType: 'text', required: true, disabled: false },
+					{ name: 'email', value: '', placeHolder: 'Enter Email', inputType: 'email', required: true, disabled: false },
+				];
 		};
 
 		/**
-		 * Sends a response with the specified message, status code, and content type.
+		 * Retrieves lookup data based on the provided data.
 		 *
-		 * @param {string} theMessage - The message to be sent in the response.
-		 * @param {number} theCode - The status code of the response.
-		 * @param {string} [theType='text/html'] - The content type of the response. Default is 'text/html'.
-		 * @return {Promise<Response>} A Promise that resolves to the response object.
+		 * @param {Object} data - The data used to retrieve the lookup data.
+		 * @return {Promise<Object>} A Promise that resolves to an empty object.
+		 *
+		 * todo: to add the logic to check if the table exits in the database, we could have this as look up arrays like setfields
+		 */
+		const getLookupData = async (data) => {
+			return {};
+		};
+
+		/**
+		 * Validates the given data.
+		 *
+		 * @param {Object} data - The data to be validated.
+		 * @return {boolean} Returns true if the data is valid, false otherwise.
+		 *
+		 * todo: to add the logic to check if the table exits in the database, we could have this as look up arrays like setfields
+		 */
+		const valaidateData = (data) => {
+			// Add your validation logic here
+			return true;
+		};
+
+		/**
+		 * Creates a response object with the provided message, status code, and type.
+		 *
+		 * @param {type} theMessage - The message to include in the response.
+		 * @param {type} theCode - The status code of the response.
+		 * @param {type} theType - The content type of the response (default is 'text/html').
+		 * @return {type} The response object.
 		 */
 		const sendResponse = (theMessage, theCode, theType = 'text/html') => {
 			return new Response(theMessage, {
@@ -144,50 +116,124 @@ export default {
 		};
 
 		/**
-		 * Returns an array of fields based on the given table name.
+		 * Renders HTML based on the provided render type, table name, fields, and data.
 		 *
-		 * @param {string} table - The name of the table.
-		 * @return {Array} An array of fields for the given table.
+		 * @param {string} renderType - The type of rendering to perform (table, formedit, formadd).
+		 * @param {string} tableName - The name of the table.
+		 * @param {Array<Object>} fields - An array of field objects.
+		 * @param {Object} theData - The data to render.
+		 * @return {Promise<string>} The rendered HTML.
 		 */
-		const setFields = (tableName) => {
-			/*
-			once we have tested the new code on production we can remove this and just use the env vars
-			if (table == 'projects') return ['id', 'name', 'guid'];
-			if (table == 'user') return ['id', 'name', 'email'];
-			*/
-			const fieldsEnvVar = `${tableName.toUpperCase()}_FIELDS`;
-			const fieldsString = env[fieldsEnvVar];
-			if (!fieldsString) {
-				throw new Error(`No field configuration found for table: ${tableName}`);
+		const renderHTML = async (renderType, tableName, fields, theData) => {
+			let htmlResponse = '';
+
+			if (renderType === 'table') {
+				const dataToRender = Array.isArray(theData.results) ? theData.results : [theData];
+				htmlResponse = `
+            <table class="pure-table">
+                <thead>
+                    <tr>
+                        ${fields.map((field) => `<th class="px-4 py-2">${field.name}</th>`).join('')}
+                        <th class="px-4 py-2">Action</th>
+                    </tr>
+                </thead>
+                <tbody hx-target="closest tr" hx-swap="outerHTML">
+                    ${dataToRender
+											.map(
+												(result) => `
+                        <tr>
+                            ${fields.map((field) => `<td>${result[field.name]}</td>`).join('')}
+                            <td>
+                                <a class="pure-button" href="/${tableName}/edit/?id=${result.id}">Edit</a>
+                                <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+                                <button class="pure-button" hx-delete="${env.API_URL}${tableName}/${result.id}" 
+                                    hx-trigger='confirmed'
+                                    hx-target="#responseText"
+                                    hx-swap="innerHTML"
+                                    onClick="Swal.fire({title: 'Delete Record',showCancelButton: true, text:'Do you want to continue?'}).then((result)=>{
+                                        if(result.isConfirmed){
+                                            htmx.trigger(this, 'confirmed');  
+                                        } 
+                                    })">
+                                    Delete
+                                </button>
+                            </td>
+                        </tr>
+                    `
+											)
+											.join('')}
+                </tbody>
+            </table>`;
+			} else if (renderType === 'formedit' || renderType === 'formadd') {
+				const formData = renderType === 'formedit' ? (Array.isArray(theData.results) ? theData.results[0] : theData) : {};
+				const formFields = await Promise.all(
+					fields
+						.filter((field) => !blackListFields.includes(field.name))
+						.map(async (field) => {
+							const lookupData = await getLookupData(field.name);
+							if (lookupData.length > 0) {
+								return `
+                        <div>
+                            <label>${field.required ? '*' : ''} ${field.name.charAt(0).toUpperCase() + field.name.slice(1)}</label>
+                            <select name="${field.name}" ${field.required ? 'required' : ''} ${field.disabled ? 'disabled' : ''}>
+                                ${lookupData
+																	.map(
+																		(item) =>
+																			`<option value="${item.id}" ${formData[field.name] == item.id ? 'selected' : ''}>${
+																				item.name
+																			}</option>`
+																	)
+																	.join('')}
+                            </select>
+                        </div>
+                    `;
+							} else {
+								return `
+                        <div>
+                            <label>${field.required ? '*' : ''} ${field.name.charAt(0).toUpperCase() + field.name.slice(1)}</label>
+                            <input type="${field.inputType === 'integer' ? 'number' : field.inputType}" name="${field.name}" value="${
+									formData[field.name] || ''
+								}"  
+                                ${field.placeHolder ? 'placeholder="' + field.placeHolder + '"' : ''} 
+                                ${field.required ? 'required' : ''} 
+                                ${field.disabled ? 'disabled' : ''}
+                            />
+                        </div>
+                    `;
+							}
+						})
+				);
+
+				const formAction = renderType === 'formedit' ? 'hx-put' : 'hx-post';
+				const formUrl = renderType === 'formedit' ? `${env.API_URL}${tableName}/${formData.id}` : `${env.API_URL}${tableName}/`;
+				htmlResponse = `
+            <form ${formAction}="${formUrl}" class="pure-form pure-form-stacked" hx-target="this" hx-swap="outerHTML">
+                ${formFields.join('')}
+                <button class="pure-button" type="submit">Submit</button>
+                <a class="pure-button" href="/${tableName}/">Cancel</a>
+            </form>`;
+			} else {
+				htmlResponse = `<div>Unsupported render type: ${renderType}</div>`;
 			}
-			return fieldsString.split(',');
+
+			return htmlResponse;
 		};
 
-		// Get request
 		if (request.method === 'GET') {
-			//get the current hx url and parse it
 			const currentUrl = request.headers.get('Hx-Current-Url');
 			const urlObj = new URL(currentUrl);
 			const searchParams = new URLSearchParams(urlObj.search);
-			//create an object from the search params
 			const params = {};
 			searchParams.forEach((value, key) => {
 				params[key] = value.includes(',') ? value.split(',') : value;
 			});
-			//get the table name
 			const segments = urlObj.pathname.split('/').filter((segment) => segment.length > 0);
 			const tableName = segments[0];
-			//get the fields
 			const fieldNames = setFields(tableName);
-			//get the query
-			const fieldsString = fieldNames.join(',');
-			//set the response
+			const fieldsString = fieldNames.map((f) => f.name).join(',');
 			let htmlResponse = '';
-			//set render type to table
 			let renderType = 'table';
-			//set the query
 			let theQuery = `SELECT ${fieldsString} FROM ${tableName} WHERE isDeleted = 0`;
-			//set the query based on the params
 			if (Object.keys(params).length !== 0) {
 				if (params.id == 0) {
 					renderType = 'formadd';
@@ -200,24 +246,19 @@ export default {
 					return sendResponse(htmlResponse, 200);
 				}
 			}
-			//run the query
 			try {
 				const stmt = env.DB.prepare(theQuery);
 				let theData;
-				//get all or the first record based on the render type
 				if (renderType == 'table' || renderType == 'formadd') {
 					theData = await stmt.all();
 				} else {
 					theData = await stmt.first();
 				}
-
-				//check if the data is empty
 				if (theData.length === 0) {
 					htmlResponse = `<div>no results</div>`;
 				} else {
-					htmlResponse = renderHTML(renderType, tableName, fieldNames, theData);
+					htmlResponse = await renderHTML(renderType, tableName, fieldNames, theData);
 				}
-
 				return sendResponse(htmlResponse, 200);
 			} catch (error) {
 				console.error('Error executing query:', error);
@@ -225,47 +266,37 @@ export default {
 				return sendResponse(htmlResponse, 500);
 			}
 		}
-		//check for the method
+
 		if (request.method === 'POST' || request.method === 'PUT' || request.method === 'DELETE') {
 			try {
-				//get the current hx url and parse it
 				const url = new URL(request.url);
-				//get the table name
 				const segments = url.pathname.split('/').filter((segment) => segment.length > 0);
 				const tableName = segments[0];
 				const id = segments[1];
-
-				//run delete
 				if (request.method === 'DELETE') {
-					//check if the id is empty
 					if (!id) {
 						return sendResponse('Missing ID for deletion', 400);
 					}
-					//delete the record (soft delete)
 					const sql = `UPDATE ${tableName} SET isDeleted = 1 WHERE id = ${id}`;
 					const stmt = env.DB.prepare(sql);
 					const result = await stmt.run();
-					//send the response
 					return sendResponse('Record deleted successfully', 200);
 				}
-				//set the content type
 				const contentType = request.headers.get('content-type');
-				//check if the content type is json ot form data and parse it to the body object
 				const body = contentType.includes('application/json') ? await request.json() : Object.fromEntries(await request.formData());
-				//rempve any fields in the blacklist
 				const fields = Object.keys(body).filter((key) => !blackListFields.includes(key));
-				//set the query
+				const isValid = valaidateData(fields);
+				if (!isValid) {
+					return sendResponse('Invalid data', 400);
+				}
 				let sql = '';
 				let updateTextType = 'added';
-				//check the method
 				if (request.method === 'POST') {
-					//insert the record
 					const fieldList = fields.join(', ');
 					const valueList = fields.map((field) => `'${body[field]}'`).join(', ');
 					sql = `INSERT INTO ${tableName} (${fieldList}) VALUES (${valueList})`;
 				} else if (request.method === 'PUT') {
 					updateTextType = 'updated';
-					//update the record
 					const setClause = fields
 						.map((field) => {
 							const value = typeof body[field] === 'string' ? `'${body[field]}'` : body[field];
@@ -276,22 +307,20 @@ export default {
 					console.log(segments);
 					console.log(sql);
 				}
-				//run the query
 				const stmt = env.DB.prepare(sql);
 				const result = await stmt.run();
-				//send response
 				const responseObj = {
 					message: `Record ${updateTextType} successfully`,
 					tableName: tableName,
 					statusText: 'OK',
 				};
-				return sendResponse(JSON.stringify(responseObj), 200, 'application/json'); //return sendResponse(responseObj, 200, 'application/json');
+				return sendResponse(JSON.stringify(responseObj), 200, 'application/json');
 			} catch (error) {
 				console.error('Error handling request:', error);
 				return sendResponse('Internal Server Error', 500);
 			}
 		}
-		//method not allowed response
+
 		return sendResponse('Method Not Allowed', 405);
 	},
 };
