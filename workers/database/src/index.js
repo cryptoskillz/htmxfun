@@ -1,6 +1,45 @@
+/*
+todo
+
+check if the field name has a matching look up table in the database and if it finds one render a select instead of an input
+add validation to the add / edit form
+join all the js file into one
+
+validation flow 
+
+
+remove validate worker
+add validate to the post / put event
+
+
+*/
+
+//blacklist fields add to this if you have fields in your database you do not want apperance in the front end
+//note : during the insert these will have to be added so we should parse it and put in correct vairables.
+//note : this may no longer be required as we can disable the fields we no longer care about but i think it will keep it as removing things like isDeleted still makes sense
+const blackListFields = [
+	'id',
+	'created_at',
+	'updated_at',
+	'deleted_at',
+	'isDeleted',
+	'publishedAt',
+	'adminId',
+	'createdAt',
+	'updatedAt',
+	'deletedAt',
+];
+
 export default {
+	/**
+	 * Fetches data based on the request method and returns a response.
+	 *
+	 * @param {Request} request - The request object.
+	 * @param {Object} env - The environment object.
+	 * @param {Object} ctx - The context object.
+	 * @return {Promise<Response>} The response object.
+	 */
 	async fetch(request, env, ctx) {
-		// Handle preflight requests
 		if (request.method === 'OPTIONS') {
 			return new Response(null, {
 				headers: {
@@ -12,59 +51,59 @@ export default {
 			});
 		}
 
-		/*
-		 * Renders HTML based on the given render type, table, fields, and results.
+		/**
+		 * Returns an array of field objects based on the given table name.
 		 *
-		 * @param {string} renderType - The type of rendering to be done.
-		 * @param {string} table - The name of the table.
-		 * @param {Array} fields - An array of field names.
-		 * @param {Array} results - An array of result objects.
-		 * @return {string} The rendered HTML.
+		 * @param {string} tableName - The name of the table.
+		 * @return {Array<Object>} An array of field objects.
 		 */
-		const renderHtML = (renderType, table, fields, results) => {
-			let htmlResponse = '';
-
-			if (renderType == 'table') {
-				htmlResponse = `
-				<table border="1">
-					<thead>
-					<tr>
-						${fields.map((field) => `<th>${field}</th>`).join('')}
-						<td>Action</td>
-					</tr>
-					</thead>
-					<tbody>
-					${results
-						.map(
-							(result) => `
-						<tr>
-						${fields.map((field) => `<td>${result[field]}</td>`).join('')}
-						<td>
-							<a href="/table/edit/?table=${table}&id=${result.id}">Edit</a> | <a href="/delete/${table}/${result.id}">Delete</a>
-						</td>
-						</tr>
-					`
-						)
-						.join('')}
-					</tbody>
-				</table>
-				`;
-			}
-
-			if (renderType == 'form') {
-				htmlResponse = `<div>form</div>`;
-			}
-			// Return the HTML response
-			return htmlResponse;
+		const setFields = (tableName) => {
+			if (tableName == 'projects')
+				return [
+					{ name: 'id', value: '', placeHolder: 'Enter ID', inputType: 'integer', required: true, disabled: false },
+					{ name: 'name', value: '', placeHolder: 'Enter Name', inputType: 'text', required: false, disabled: false },
+					{ name: 'guid', value: '', placeHolder: 'Enter GUID', inputType: 'guid', required: true, disabled: false },
+				];
+			if (tableName == 'user')
+				return [
+					{ name: 'id', value: '', placeHolder: 'Enter ID', inputType: 'number', required: true, disabled: false },
+					{ name: 'name', value: '', placeHolder: 'Enter Name', inputType: 'text', required: true, disabled: false },
+					{ name: 'email', value: '', placeHolder: 'Enter Email', inputType: 'email', required: true, disabled: false },
+				];
 		};
 
-		/*
-		 * Creates and returns a new Response object with the provided message, status code, and content type.
+		/**
+		 * Retrieves lookup data based on the provided data.
 		 *
-		 * @param {string} theMessage - The message to be sent in the response.
-		 * @param {number} theCode - The status code of the response.
-		 * @param {string} [theType='text/html'] - The content type of the response. Defaults to 'text/html'.
-		 * @return {Response} The newly created Response object.
+		 * @param {Object} data - The data used to retrieve the lookup data.
+		 * @return {Promise<Object>} A Promise that resolves to an empty object.
+		 *
+		 * todo: to add the logic to check if the table exits in the database, we could have this as look up arrays like setfields
+		 */
+		const getLookupData = async (data) => {
+			return {};
+		};
+
+		/**
+		 * Validates the given data.
+		 *
+		 * @param {Object} data - The data to be validated.
+		 * @return {boolean} Returns true if the data is valid, false otherwise.
+		 *
+		 * todo: to add the logic to check if the table exits in the database, we could have this as look up arrays like setfields
+		 */
+		const valaidateData = (data) => {
+			// Add your validation logic here
+			return true;
+		};
+
+		/**
+		 * Creates a response object with the provided message, status code, and type.
+		 *
+		 * @param {type} theMessage - The message to include in the response.
+		 * @param {type} theCode - The status code of the response.
+		 * @param {type} theType - The content type of the response (default is 'text/html').
+		 * @return {type} The response object.
 		 */
 		const sendResponse = (theMessage, theCode, theType = 'text/html') => {
 			return new Response(theMessage, {
@@ -76,86 +115,212 @@ export default {
 			});
 		};
 
-		// Handle GET requests
-		if (request.method === 'GET') {
-			// Extract the Hx-Current-Url header
-			const currentUrl = request.headers.get('Hx-Current-Url');
-			const urlObj = new URL(currentUrl);
-			const searchParams = urlObj.searchParams;
+		/**
+		 * Renders HTML based on the provided render type, table name, fields, and data.
+		 *
+		 * @param {string} renderType - The type of rendering to perform (table, formedit, formadd).
+		 * @param {string} tableName - The name of the table.
+		 * @param {Array<Object>} fields - An array of field objects.
+		 * @param {Object} theData - The data to render.
+		 * @return {Promise<string>} The rendered HTML.
+		 */
+		const renderHTML = async (renderType, tableName, fields, theData) => {
+			let htmlResponse = '';
 
-			// Parse query parameters from the Hx-Current-Url
-			const params = {};
-			searchParams.forEach((value, key) => {
-				if (value.includes(',')) {
-					params[key] = value.split(',');
-				} else {
-					params[key] = value;
-				}
-			});
+			if (renderType === 'table') {
+				const dataToRender = Array.isArray(theData.results) ? theData.results : [theData];
+				htmlResponse = `
+            <table class="pure-table">
+                <thead>
+                    <tr>
+                        ${fields.map((field) => `<th class="px-4 py-2">${field.name}</th>`).join('')}
+                        <th class="px-4 py-2">Action</th>
+                    </tr>
+                </thead>
+                <tbody hx-target="closest tr" hx-swap="outerHTML">
+                    ${dataToRender
+											.map(
+												(result) => `
+                        <tr>
+                            ${fields.map((field) => `<td>${result[field.name]}</td>`).join('')}
+                            <td>
+                                <a class="pure-button" href="/${tableName}/edit/?id=${result.id}">Edit</a>
+                                <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+                                <button class="pure-button" hx-delete="${env.API_URL}${tableName}/${result.id}" 
+                                    hx-trigger='confirmed'
+                                    hx-target="#responseText"
+                                    hx-swap="innerHTML"
+                                    onClick="Swal.fire({title: 'Delete Record',showCancelButton: true, text:'Do you want to continue?'}).then((result)=>{
+                                        if(result.isConfirmed){
+                                            htmx.trigger(this, 'confirmed');  
+                                        } 
+                                    })">
+                                    Delete
+                                </button>
+                            </td>
+                        </tr>
+                    `
+											)
+											.join('')}
+                </tbody>
+            </table>`;
+			} else if (renderType === 'formedit' || renderType === 'formadd') {
+				const formData = renderType === 'formedit' ? (Array.isArray(theData.results) ? theData.results[0] : theData) : {};
+				const formFields = await Promise.all(
+					fields
+						.filter((field) => !blackListFields.includes(field.name))
+						.map(async (field) => {
+							const lookupData = await getLookupData(field.name);
+							if (lookupData.length > 0) {
+								return `
+                        <div>
+                            <label>${field.required ? '*' : ''} ${field.name.charAt(0).toUpperCase() + field.name.slice(1)}</label>
+                            <select name="${field.name}" ${field.required ? 'required' : ''} ${field.disabled ? 'disabled' : ''}>
+                                ${lookupData
+																	.map(
+																		(item) =>
+																			`<option value="${item.id}" ${formData[field.name] == item.id ? 'selected' : ''}>${
+																				item.name
+																			}</option>`
+																	)
+																	.join('')}
+                            </select>
+                        </div>
+                    `;
+							} else {
+								return `
+                        <div>
+                            <label>${field.required ? '*' : ''} ${field.name.charAt(0).toUpperCase() + field.name.slice(1)}</label>
+                            <input type="${field.inputType === 'integer' ? 'number' : field.inputType}" name="${field.name}" value="${
+									formData[field.name] || ''
+								}"  
+                                ${field.placeHolder ? 'placeholder="' + field.placeHolder + '"' : ''} 
+                                ${field.required ? 'required' : ''} 
+                                ${field.disabled ? 'disabled' : ''}
+                            />
+                        </div>
+                    `;
+							}
+						})
+				);
 
-			// Extract specific values from params
-			const { table, fields, id, type } = params;
-
-			// Check if required parameters are present
-			if (!table || !fields) {
-				return sendResponse('Missing required parameters: table and fields', 400);
+				const formAction = renderType === 'formedit' ? 'hx-put' : 'hx-post';
+				const formUrl = renderType === 'formedit' ? `${env.API_URL}${tableName}/${formData.id}` : `${env.API_URL}${tableName}/`;
+				htmlResponse = `
+            <form ${formAction}="${formUrl}" class="pure-form pure-form-stacked" hx-target="this" hx-swap="outerHTML">
+                ${formFields.join('')}
+                <button class="pure-button" type="submit">Submit</button>
+                <a class="pure-button" href="/${tableName}/">Cancel</a>
+            </form>`;
+			} else {
+				htmlResponse = `<div>Unsupported render type: ${renderType}</div>`;
 			}
 
-			const fieldsString = fields.join(', ');
+			return htmlResponse;
+		};
 
-			// Prepare and execute the SQL query
-			let theQuery = '';
+		if (request.method === 'GET') {
+			const currentUrl = request.headers.get('Hx-Current-Url');
+			const urlObj = new URL(currentUrl);
+			const searchParams = new URLSearchParams(urlObj.search);
+			const params = {};
+			searchParams.forEach((value, key) => {
+				params[key] = value.includes(',') ? value.split(',') : value;
+			});
+			const segments = urlObj.pathname.split('/').filter((segment) => segment.length > 0);
+			const tableName = segments[0];
+			const fieldNames = setFields(tableName);
+			const fieldsString = fieldNames.map((f) => f.name).join(',');
+			let htmlResponse = '';
+			let renderType = 'table';
+			let theQuery = `SELECT ${fieldsString} FROM ${tableName} WHERE isDeleted = 0`;
+			if (Object.keys(params).length !== 0) {
+				if (params.id == 0) {
+					renderType = 'formadd';
+					theQuery = `PRAGMA table_info(${tableName});`;
+				} else if (Number.isInteger(Number(params.id)) && Number(params.id) > 0) {
+					theQuery = `SELECT * FROM ${tableName} WHERE isDeleted = 0 AND id = ${params.id}`;
+					renderType = 'formedit';
+				} else {
+					htmlResponse = `<div>invalid id</div>`;
+					return sendResponse(htmlResponse, 200);
+				}
+			}
 			try {
-				//add a id check
-				theQuery = `SELECT ${fieldsString} FROM ${table} WHERE isDeleted = 0`; // Add WHERE clause to filter deleted records
-				if (id !== undefined && id !== '') {
-					theQuery += ` AND id = ${id}`;
-				}
-				// Execute the SQL query
 				const stmt = env.DB.prepare(theQuery);
-				const { results } = await stmt.all();
-				// set a default value for type
-				let renderType = 'table';
-				// Check if type parameter is present
-				if (type !== undefined && type !== '') {
-					renderType = type;
+				let theData;
+				if (renderType == 'table' || renderType == 'formadd') {
+					theData = await stmt.all();
+				} else {
+					theData = await stmt.first();
 				}
-				// Generate HTML response
-				const htmlResponse = renderHtML(renderType, table, fields, results);
-				// Return the HTML response
+				if (theData.length === 0) {
+					htmlResponse = `<div>no results</div>`;
+				} else {
+					htmlResponse = await renderHTML(renderType, tableName, fieldNames, theData);
+				}
 				return sendResponse(htmlResponse, 200);
 			} catch (error) {
-				// Log and return error response
 				console.error('Error executing query:', error);
-				const htmlResponse = `Error executing query ${theQuery}`;
+				htmlResponse = `Error executing query ${theQuery}`;
 				return sendResponse(htmlResponse, 500);
 			}
 		}
 
-		// Handle POST requests
-		if (request.method === 'POST') {
-			// Parse the JSON body of the POST request
-			let jsonData;
+		if (request.method === 'POST' || request.method === 'PUT' || request.method === 'DELETE') {
 			try {
-				jsonData = await request.json();
+				const url = new URL(request.url);
+				const segments = url.pathname.split('/').filter((segment) => segment.length > 0);
+				const tableName = segments[0];
+				const id = segments[1];
+				if (request.method === 'DELETE') {
+					if (!id) {
+						return sendResponse('Missing ID for deletion', 400);
+					}
+					const sql = `UPDATE ${tableName} SET isDeleted = 1 WHERE id = ${id}`;
+					const stmt = env.DB.prepare(sql);
+					const result = await stmt.run();
+					return sendResponse('Record deleted successfully', 200);
+				}
+				const contentType = request.headers.get('content-type');
+				const body = contentType.includes('application/json') ? await request.json() : Object.fromEntries(await request.formData());
+				const fields = Object.keys(body).filter((key) => !blackListFields.includes(key));
+				const isValid = valaidateData(fields);
+				if (!isValid) {
+					return sendResponse('Invalid data', 400);
+				}
+				let sql = '';
+				let updateTextType = 'added';
+				if (request.method === 'POST') {
+					const fieldList = fields.join(', ');
+					const valueList = fields.map((field) => `'${body[field]}'`).join(', ');
+					sql = `INSERT INTO ${tableName} (${fieldList}) VALUES (${valueList})`;
+				} else if (request.method === 'PUT') {
+					updateTextType = 'updated';
+					const setClause = fields
+						.map((field) => {
+							const value = typeof body[field] === 'string' ? `'${body[field]}'` : body[field];
+							return `${field} = ${value}`;
+						})
+						.join(', ');
+					sql = `UPDATE ${tableName} SET ${setClause} WHERE id = ${id}`;
+					console.log(segments);
+					console.log(sql);
+				}
+				const stmt = env.DB.prepare(sql);
+				const result = await stmt.run();
+				const responseObj = {
+					message: `Record ${updateTextType} successfully`,
+					tableName: tableName,
+					statusText: 'OK',
+				};
+				return sendResponse(JSON.stringify(responseObj), 200, 'application/json');
 			} catch (error) {
-				return new Response('Invalid JSON', { status: 400 });
+				console.error('Error handling request:', error);
+				return sendResponse('Internal Server Error', 500);
 			}
-
-			// Extract specific values if needed
-			const { table, fields } = jsonData;
-
-			// Generate HTML response
-			const htmlResponse = `
-        <div>
-          <p>Received table: ${table}</p>
-          <p>Received fields: ${fields.join(', ')}</p>
-        </div>
-      `;
-			return sendResponse(htmlResponse, 200);
 		}
 
-		// Handle unsupported methods
 		return sendResponse('Method Not Allowed', 405);
 	},
 };

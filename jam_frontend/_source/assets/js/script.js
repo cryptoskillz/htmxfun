@@ -1,91 +1,3 @@
-// Function to store a value in local storage
-const storeLocal = (theValue = { seat: "1-1" }) => {
-  localStorage.setItem("tableData", JSON.stringify(theValue));
-};
-
-// Function to get a value from local storage and set it as an attribute
-const getLocal = (theElement) => {
-  const theDiv = document.getElementById(theElement);
-  const myValue = localStorage.getItem("tableData");
-  if (myValue) {
-    theDiv.setAttribute("hx-vals", myValue);
-  }
-};
-
-//get the url paramaters
-const getURLParameter = () => {
-  // Get the current URL
-  const currentUrl = window.location.href;
-  const urlObj = new URL(currentUrl);
-  const searchParams = new URLSearchParams(urlObj.search);
-  const params = {};
-  let hasTable = false;
-
-  searchParams.forEach((value, key) => {
-    // Check if the first parameter is "table"
-    if (key === "table") {
-      hasTable = true;
-    }
-
-    // Split comma-separated values into an array, if applicable
-    if (value.includes(",")) {
-      params[key] = value.split(",");
-    } else {
-      params[key] = value;
-    }
-  });
-
-  if (hasTable) {
-    const paramsJson = JSON.stringify(params);
-    // Ensure theDiv exists before setting the attribute
-    const theDiv = document.getElementById("table");
-    if (theDiv) {
-      theDiv.setAttribute("hx-vals", paramsJson);
-    }
-  }
-};
-
-const getURLParameter2 = () => {
-  const currentUrl = window.location.href;
-  const urlObj = new URL(currentUrl);
-  const searchParams = new URLSearchParams(urlObj.search);
-  const params = {};
-  let hasTable = false;
-
-  searchParams.forEach((value, key) => {
-    if (key === "table") {
-      hasTable = true;
-    }
-    if (value.includes(",")) {
-      params[key] = value.split(",");
-    } else {
-      params[key] = value;
-    }
-  });
-
-  if (hasTable) {
-    const paramsJson = JSON.stringify(params);
-    const theDiv = document.getElementById("table");
-    if (theDiv) {
-      // Set the href attribute with query parameters
-      const queryString = Object.keys(params)
-        .map(
-          (key) =>
-            `${key}=${
-              Array.isArray(params[key]) ? params[key].join(",") : params[key]
-            }`
-        )
-        .join("&");
-      const url = new URL(theDiv.getAttribute("hx-get"));
-      url.search = queryString;
-      theDiv.setAttribute("hx-get", url.toString());
-    }
-  }
-};
-
-// Call the function when the document is ready
-document.addEventListener("DOMContentLoaded", getURLParameter);
-
 // Function to execute when document is ready
 let whenDocumentReady = (f) => {
   /in/.test(document.readyState)
@@ -96,9 +8,59 @@ let whenDocumentReady = (f) => {
 // Ready function
 let isReady = () => {};
 
+// htmx afterRequest processing
+/*
+note: we had to code this becuase none of the dcoumented hx function to redirect to a new url seemed to work, 
+it may not be added yet or we may be dumb.  We look back and try to fix this later
+*/
+document.addEventListener("htmx:afterRequest", function (event) {
+  // Check if the response is JSON
+  let responseData;
+  //console.log(event.detail.xhr.responseText);
+
+  if (event.detail.xhr.responseText === "Record deleted successfully") {
+    const targetRow = event.target.closest("tr");
+    if (targetRow) {
+      targetRow.remove();
+    }
+    setTimeout(function () {
+      const tableElement = document.getElementById("responseText");
+      //set the message
+      tableElement.textContent = "";
+    }, 1000); // 1000 milliseconds = 1 second
+    return;
+  }
+
+  try {
+    responseData = JSON.parse(event.detail.xhr.response);
+  } catch (error) {
+    // If parsing fails, this will be the server senidng down some html for the htmx to use as the response
+    //console.log("Response is not JSON:", event.detail.xhr.response);
+    return;
+  }
+  // Check if the response contains the expected properties
+  if (
+    responseData &&
+    responseData.message &&
+    responseData.tableName &&
+    responseData.statusText
+  ) {
+    // Check if record was added or updated successfully
+    if (responseData.statusText === "OK") {
+      // Update the table element with the message
+      const tableElement = document.getElementById("table");
+      //set the message
+      tableElement.textContent = responseData.message;
+      //redirect to the table
+      setTimeout(function () {
+        window.location.href = `/${responseData.tableName}/`; // Assuming responseData.table contains the table name
+      }, 1000); // 1000 milliseconds = 1 second
+    }
+  } else {
+    console.error("Response does not contain expected properties.");
+  }
+});
+
 // Exporting the functions to make them globally accessible
-window.storeLocal = storeLocal;
-window.getLocal = getLocal;
-window.getURLParameter = getURLParameter;
 window.whenDocumentReady = whenDocumentReady;
 window.isReady = isReady;
