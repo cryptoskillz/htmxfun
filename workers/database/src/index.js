@@ -4,6 +4,7 @@ todo
 check if the field name has a matching look up table in the database and if it finds one render a select instead of an input
 add validation to the add / edit form
 join all the js file into one
+add jwt login
 
 validation flow 
 
