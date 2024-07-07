@@ -94,7 +94,7 @@ export default {
 		 *
 		 * todo: to add the logic to check if the table exits in the database, we could have this as look up arrays like setfields
 		 */
-		const valaidateData = (data) => {
+		const validateData = (data) => {
 			// Add your validation logic here
 			return true;
 		};
@@ -128,8 +128,9 @@ export default {
 		 */
 		const renderHTML = async (renderType, tableName, fields, theData) => {
 			let htmlResponse = '';
-
+			//check the render type
 			if (renderType === 'table') {
+				//render the table
 				const dataToRender = Array.isArray(theData.results) ? theData.results : [theData];
 				htmlResponse = `
             <table class="pure-table">
@@ -166,13 +167,17 @@ export default {
 											.join('')}
                 </tbody>
             </table>`;
+				//render the form
 			} else if (renderType === 'formedit' || renderType === 'formadd') {
 				const formData = renderType === 'formedit' ? (Array.isArray(theData.results) ? theData.results[0] : theData) : {};
+				//render the fields
 				const formFields = await Promise.all(
 					fields
 						.filter((field) => !blackListFields.includes(field.name))
 						.map(async (field) => {
+							//get the lookup data
 							const lookupData = await getLookupData(field.name);
+							//check if the field is a lookup field
 							if (lookupData.length > 0) {
 								return `
                         <div>
@@ -190,6 +195,7 @@ export default {
                         </div>
                     `;
 							} else {
+								//render the input field if it is not a lookup field
 								return `
                         <div>
                             <label>${field.required ? '*' : ''} ${field.name.charAt(0).toUpperCase() + field.name.slice(1)}</label>
@@ -205,8 +211,9 @@ export default {
 							}
 						})
 				);
-
+				//set the post or put action
 				const formAction = renderType === 'formedit' ? 'hx-put' : 'hx-post';
+				//render the submit and cancel buttons
 				const formUrl = renderType === 'formedit' ? `${env.API_URL}${tableName}/${formData.id}` : `${env.API_URL}${tableName}/`;
 				htmlResponse = `
             <form ${formAction}="${formUrl}" class="pure-form pure-form-stacked" hx-target="this" hx-swap="outerHTML">
@@ -220,8 +227,9 @@ export default {
 
 			return htmlResponse;
 		};
-
+		//get the fields for the table
 		if (request.method === 'GET') {
+			//get the query params
 			const currentUrl = request.headers.get('Hx-Current-Url');
 			const urlObj = new URL(currentUrl);
 			const searchParams = new URLSearchParams(urlObj.search);
@@ -229,13 +237,18 @@ export default {
 			searchParams.forEach((value, key) => {
 				params[key] = value.includes(',') ? value.split(',') : value;
 			});
+			//get the table name
 			const segments = urlObj.pathname.split('/').filter((segment) => segment.length > 0);
 			const tableName = segments[0];
+			//set the fields
 			const fieldNames = setFields(tableName);
 			const fieldsString = fieldNames.map((f) => f.name).join(',');
 			let htmlResponse = '';
+			//set the render type
 			let renderType = 'table';
+			//set the query
 			let theQuery = `SELECT ${fieldsString} FROM ${tableName} WHERE isDeleted = 0`;
+			//build the query with the params and table name
 			if (Object.keys(params).length !== 0) {
 				if (params.id == 0) {
 					renderType = 'formadd';
@@ -244,21 +257,26 @@ export default {
 					theQuery = `SELECT * FROM ${tableName} WHERE isDeleted = 0 AND id = ${params.id}`;
 					renderType = 'formedit';
 				} else {
+					//invalid id
 					htmlResponse = `<div>invalid id</div>`;
 					return sendResponse(htmlResponse, 200);
 				}
 			}
 			try {
+				//	execute the query
 				const stmt = env.DB.prepare(theQuery);
 				let theData;
+				//get the first or all results
 				if (renderType == 'table' || renderType == 'formadd') {
 					theData = await stmt.all();
 				} else {
 					theData = await stmt.first();
 				}
+				//check we have some results
 				if (theData.length === 0) {
 					htmlResponse = `<div>no results</div>`;
 				} else {
+					//render the html
 					htmlResponse = await renderHTML(renderType, tableName, fieldNames, theData);
 				}
 				return sendResponse(htmlResponse, 200);
@@ -268,36 +286,45 @@ export default {
 				return sendResponse(htmlResponse, 500);
 			}
 		}
-
+		//insert / update / delete
 		if (request.method === 'POST' || request.method === 'PUT' || request.method === 'DELETE') {
 			try {
+				//get the table name
 				const url = new URL(request.url);
 				const segments = url.pathname.split('/').filter((segment) => segment.length > 0);
 				const tableName = segments[0];
+				//set the fields
 				const id = segments[1];
 				if (request.method === 'DELETE') {
 					if (!id) {
 						return sendResponse('Missing ID for deletion', 400);
 					}
+					//delete the record
 					const sql = `UPDATE ${tableName} SET isDeleted = 1 WHERE id = ${id}`;
 					const stmt = env.DB.prepare(sql);
 					const result = await stmt.run();
 					return sendResponse('Record deleted successfully', 200);
 				}
+				//get the data
 				const contentType = request.headers.get('content-type');
 				const body = contentType.includes('application/json') ? await request.json() : Object.fromEntries(await request.formData());
+				//validate the data
 				const fields = Object.keys(body).filter((key) => !blackListFields.includes(key));
-				const isValid = valaidateData(fields);
+				const isValid = validateData(fields);
 				if (!isValid) {
 					return sendResponse('Invalid data', 400);
 				}
+				//build the sql
 				let sql = '';
 				let updateTextType = 'added';
+				//check if its a post
 				if (request.method === 'POST') {
+					//insert the record
 					const fieldList = fields.join(', ');
 					const valueList = fields.map((field) => `'${body[field]}'`).join(', ');
 					sql = `INSERT INTO ${tableName} (${fieldList}) VALUES (${valueList})`;
 				} else if (request.method === 'PUT') {
+					//update the record
 					updateTextType = 'updated';
 					const setClause = fields
 						.map((field) => {
@@ -306,8 +333,6 @@ export default {
 						})
 						.join(', ');
 					sql = `UPDATE ${tableName} SET ${setClause} WHERE id = ${id}`;
-					console.log(segments);
-					console.log(sql);
 				}
 				const stmt = env.DB.prepare(sql);
 				const result = await stmt.run();
