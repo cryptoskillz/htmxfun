@@ -3,6 +3,29 @@ layout: layout
 title: "index"
 ---
 
-<a href="/projects/">Projects</a>
-</br>
-<a href="/user/">Users</a>
+<div>
+  <form
+    hx-post="{{ API_JWT_URL }}"
+    hx-target="#response"
+    hx-swap="innerHTML"
+    class="pure-form pure-form-stacked"
+  >
+    <label for="inpLogin"> Login </label>
+    <input
+      type="email"
+      name="email"
+      placeholder="enter email"
+      id="email"
+      required
+    />
+    <label for="inpPassword"> Password </label>
+    <input
+      type="password"
+      name="password"
+      placeholder="enter password"
+      id="password"
+      required
+    />
+    <button class="pure-button" type="submit">Login</button>
+  </form>
+</div>

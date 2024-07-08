@@ -8,6 +8,14 @@ let whenDocumentReady = (f) => {
 // Ready function
 let isReady = () => {};
 
+// htmx configRequest
+document.body.addEventListener("htmx:configRequest", function (evt) {
+  // Add the auth token to the request
+  if (localStorage.getItem("auth_token")) {
+    evt.detail.parameters["auth_token"] = auth_token;
+  }
+});
+
 // htmx afterRequest processing
 /*
 note: we had to code this becuase none of the dcoumented hx function to redirect to a new url seemed to work, 
@@ -29,6 +37,7 @@ document.addEventListener("htmx:afterRequest", function (event) {
     return;
   }
 
+  // Check if the response is JSON as we know it was not a delete above
   try {
     responseData = JSON.parse(event.detail.xhr.response);
   } catch (error) {
@@ -45,7 +54,7 @@ document.addEventListener("htmx:afterRequest", function (event) {
     // Check if record was added or updated successfully
     if (responseData.statusText === "OK") {
       // Update the table element with the message
-      const tableElement = document.getElementById("table");
+      const tableElement = document.getElementById("response");
       //set the message
       tableElement.textContent = responseData.message;
       //redirect to the table
@@ -53,8 +62,26 @@ document.addEventListener("htmx:afterRequest", function (event) {
         window.location.href = `/${responseData.tableName}/`; // Assuming responseData.table contains the table name
       }, 1000); // 1000 milliseconds = 1 second
     }
-  } else {
-    console.error("Response does not contain expected properties.");
+  }
+
+  if (
+    responseData &&
+    responseData.message &&
+    responseData.token &&
+    responseData.statusText
+  ) {
+    // Check if record was added or updated successfully
+    if (responseData.statusText === "OK") {
+      localStorage.setItem("auth_token", responseData.token);
+      // Update the table element with the message
+      const tableElement = document.getElementById("response");
+      //set the message
+      tableElement.textContent = responseData.message;
+      //redirect to the table
+      setTimeout(function () {
+        window.location.href = `/home/`; // Assuming responseData.table contains the table name
+      }, 1000); // 1000 milliseconds = 1 second
+    }
   }
 });
 
