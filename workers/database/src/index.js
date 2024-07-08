@@ -49,20 +49,38 @@ function handleOptions() {
 async function handleGetRequest(request, env, authToken) {
 	const jwtValid = await validateJWT(authToken, env.SECRET_KEY);
 	if (!jwtValid) return sendResponse('Unauthorized', 401);
-
+	//why are we using hx-current-url here instad of uel
 	const url = new URL(request.headers.get('Hx-Current-Url'));
 	const searchParams = new URLSearchParams(url.search);
 	const params = Object.fromEntries(searchParams.entries());
 	const tableName = url.pathname.split('/').filter(Boolean)[0];
-
 	const fields = getFields(tableName);
 	const fieldNames = fields.map((f) => f.name).join(',');
 	const renderType = determineRenderType(params);
 	const query = buildQuery(params, tableName, fieldNames, renderType);
-
 	try {
-		const stmt = env.DB.prepare(query);
-		const data = renderType === 'table' || renderType === 'formadd' ? await stmt.all() : await stmt.first();
+		/*
+		TODO: 
+
+		check delete function is showing unathorised (paramater or token)
+		insert is not generating a guid automitcally 
+
+		thoughts
+
+		we could uses the field list instead of the PRAGMA table_info(projects); from the setfields function as that would be easier to control 
+		if we do this then we can make the build insert query much simpleier
+
+		if we do this then buildQuery has to be updated for the insert 
+
+		buildInsertQuery does not have to exxeute the prag as we have the setfields that we can use
+
+
+
+
+		*/
+		let returnOne = true;
+		if (renderType == 'table') returnOne = false;
+		const data = await executeQuery(env.DB, query, returnOne, true);
 		const htmlResponse = data.length === 0 ? 'No results' : await renderHTML(renderType, tableName, fields, data, env);
 		return sendResponse(htmlResponse, 200);
 	} catch (error) {
@@ -76,8 +94,6 @@ async function handleDataModification(request, env, url, authToken) {
 	const tableName = segments[0];
 	const id = segments[1];
 	const body = await parseRequestBody(request);
-	console.log('body');
-	console.log(body);
 
 	// Validate JWT
 	const jwtToken = body.authToken || getUrlParameter(request.url, 'authToken');
@@ -95,7 +111,7 @@ async function handleDataModification(request, env, url, authToken) {
 	if (!validateData(fields)) return sendResponse('Invalid data', 400);
 
 	const sql = request.method === 'POST' ? await buildInsertQuery(tableName, env, body) : buildUpdateQuery(tableName, fields, body, id);
-	await executeQuery(env.DB, sql);
+	await executeQuery(env.DB, sql, true, true);
 
 	const responseObj = {
 		message: `Record ${request.method === 'POST' ? 'added' : 'updated'} successfully`,
@@ -161,8 +177,8 @@ function validateData(data) {
 
 async function getTableFields(env, tableName) {
 	const query = `PRAGMA table_info(${tableName});`;
-	const results = await executeQuery(env.DB, query, true);
-	return results.map((row) => row.name);
+	const data = await executeQuery(env.DB, query, false, true);
+	return data.results.map((row) => row.name);
 }
 
 async function buildInsertQuery(tableName, env, body) {
@@ -174,7 +190,6 @@ async function buildInsertQuery(tableName, env, body) {
 	const insertValues = [];
 
 	fields.forEach((field) => {
-		console.log(field);
 		// Exclude fields in blacklist and 'authToken'
 		if (!blackListFields.includes(field) && body.hasOwnProperty(field)) {
 			insertFields.push(field);
@@ -217,10 +232,12 @@ async function renderHTML(renderType, tableName, fields, data, env) {
 	if (renderType === 'table') {
 		return renderTable(fields, data, tableName, env);
 	}
+
 	if (['formedit', 'formadd'].includes(renderType)) {
-		const formData = renderType === 'formedit' ? data[0] : {};
+		const formData = renderType === 'formedit' ? data : {};
 		return renderForm(renderType, tableName, fields, formData, env);
 	}
+
 	return `<div>Unsupported render type: ${renderType}</div>`;
 }
 
@@ -261,19 +278,20 @@ function renderTable(fields, data, tableName, env) {
 }
 
 async function renderForm(renderType, tableName, fields, formData, env) {
-	console.log(formData);
 	const formFields = await Promise.all(
 		fields
 			.filter((field) => !blackListFields.includes(field.name)) // Filter out fields in blacklist
 			.map(async (field) => {
 				let lookupData = [];
 				if (field.inputType === 'select') {
-					lookupData = await getLookupData(tableName, field.name);
+					lookupData = await getLookupData(tableName, field);
 				}
 
 				if (lookupData.length > 0) {
 					return renderSelectField(field, formData, lookupData);
 				}
+				console.log(field.name);
+				console.log(formData);
 
 				return renderInputField(field, formData, renderType);
 			})
@@ -322,15 +340,23 @@ async function getLookupData(tableName, fieldName) {
 	];
 }
 
-async function executeQuery(db, sql, debug = false) {
-	if (debug == true) console.log(sql);
-
+async function executeQuery(db, query, returnOne = false, debug = false) {
 	try {
-		const stmt = db.prepare(sql);
-		await stmt.first();
+		const stmt = db.prepare(query);
+		let data;
+
+		if (returnOne == false) data = await stmt.all();
+		else data = await stmt.first();
+
+		if (debug == true) {
+			console.log(returnOne);
+			console.log(query);
+			console.log(data);
+		}
+		return data;
 	} catch (error) {
 		console.error('Error executing query:', error);
-		throw new Error(`Error executing query: ${error.message}`);
+		throw error;
 	}
 }
 
