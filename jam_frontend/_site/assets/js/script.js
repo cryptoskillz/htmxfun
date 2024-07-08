@@ -8,11 +8,10 @@ let whenDocumentReady = (f) => {
 // Ready function
 let isReady = () => {};
 
+// htmx configRequest
 document.body.addEventListener("htmx:configRequest", function (evt) {
-  const auth_token = localStorage.getItem("auth_token");
-  console.log(auth_token);
+  // Add the auth token to the request
   if (localStorage.getItem("auth_token")) {
-    console.log("in local storage");
     evt.detail.parameters["auth_token"] = auth_token;
   }
 });
@@ -46,6 +45,29 @@ document.addEventListener("htmx:afterRequest", function (event) {
     return;
   }
   // Check if the response contains the expected properties
+
+  let redirectUrl = "";
+  if (responseData.statusText === "OK") {
+    // Update the table element with the message
+    const tableElement = document.getElementById("responseText");
+    //set the message
+    tableElement.textContent = responseData.message;
+    if (responseData.tableName) {
+      redirectUrl = `/${responseData.tableName}/`;
+    }
+
+    if (responseData.token) {
+      localStorage.setItem("auth_token", responseData.token);
+      redirectUrl = `/home/`;
+    }
+  }
+
+  if (redirectUrl !== "") {
+    setTimeout(function () {
+      window.location.href = redirectUrl;
+    }, 1000); // 1000 milliseconds = 1 second
+  }
+  /*
   if (
     responseData &&
     responseData.message &&
@@ -54,10 +76,6 @@ document.addEventListener("htmx:afterRequest", function (event) {
   ) {
     // Check if record was added or updated successfully
     if (responseData.statusText === "OK") {
-      // Update the table element with the message
-      const tableElement = document.getElementById("response");
-      //set the message
-      tableElement.textContent = responseData.message;
       //redirect to the table
       setTimeout(function () {
         window.location.href = `/${responseData.tableName}/`; // Assuming responseData.table contains the table name
@@ -75,7 +93,7 @@ document.addEventListener("htmx:afterRequest", function (event) {
     if (responseData.statusText === "OK") {
       localStorage.setItem("auth_token", responseData.token);
       // Update the table element with the message
-      const tableElement = document.getElementById("response");
+      const tableElement = document.getElementById("responseText");
       //set the message
       tableElement.textContent = responseData.message;
       //redirect to the table
@@ -84,6 +102,7 @@ document.addEventListener("htmx:afterRequest", function (event) {
       }, 1000); // 1000 milliseconds = 1 second
     }
   }
+*/
 });
 
 // Exporting the functions to make them globally accessible
