@@ -14,7 +14,7 @@ export default {
 			return new Response(null, {
 				headers: {
 					'Access-Control-Allow-Origin': '*',
-					'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+					'Access-Control-Allow-Methods': 'POST',
 					'Access-Control-Allow-Headers': '*',
 					'Access-Control-Max-Age': '86400',
 				},
@@ -38,12 +38,6 @@ export default {
 				},
 			});
 		};
-
-		// Handle OPTIONS request
-		if (request.method === 'GET') {
-			// Handle GET request
-			return new Response('GET request handled');
-		}
 
 		// Handle POST request
 		if (request.method === 'POST') {

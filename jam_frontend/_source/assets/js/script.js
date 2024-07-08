@@ -11,9 +11,9 @@ let isReady = () => {};
 // htmx configRequest
 document.body.addEventListener("htmx:configRequest", function (evt) {
   // Add the auth token to the request
-  if (localStorage.getItem("auth_token")) {
-    evt.detail.parameters["auth_token"] = auth_token;
-  }
+  if (localStorage.getItem("authToken")) {
+    evt.detail.parameters["authToken"] = localStorage.getItem("authToken");
+  } else evt.detail.parameters["authToken"] = "";
 });
 
 // htmx afterRequest processing
@@ -24,6 +24,7 @@ it may not be added yet or we may be dumb.  We look back and try to fix this lat
 document.addEventListener("htmx:afterRequest", function (event) {
   // Check if the response is JSON
   let responseData;
+  //check if it is a
   if (event.detail.xhr.responseText === "Record deleted successfully") {
     const targetRow = event.target.closest("tr");
     if (targetRow) {
@@ -45,7 +46,7 @@ document.addEventListener("htmx:afterRequest", function (event) {
     return;
   }
   // Check if the response contains the expected properties
-
+  console.log(responseData);
   let redirectUrl = "";
   if (responseData.statusText === "OK") {
     // Update the table element with the message
@@ -57,7 +58,7 @@ document.addEventListener("htmx:afterRequest", function (event) {
     }
 
     if (responseData.token) {
-      localStorage.setItem("auth_token", responseData.token);
+      localStorage.setItem("authToken", responseData.token);
       redirectUrl = `/home/`;
     }
   }
@@ -67,42 +68,6 @@ document.addEventListener("htmx:afterRequest", function (event) {
       window.location.href = redirectUrl;
     }, 1000); // 1000 milliseconds = 1 second
   }
-  /*
-  if (
-    responseData &&
-    responseData.message &&
-    responseData.tableName &&
-    responseData.statusText
-  ) {
-    // Check if record was added or updated successfully
-    if (responseData.statusText === "OK") {
-      //redirect to the table
-      setTimeout(function () {
-        window.location.href = `/${responseData.tableName}/`; // Assuming responseData.table contains the table name
-      }, 1000); // 1000 milliseconds = 1 second
-    }
-  }
-
-  if (
-    responseData &&
-    responseData.message &&
-    responseData.token &&
-    responseData.statusText
-  ) {
-    // Check if record was added or updated successfully
-    if (responseData.statusText === "OK") {
-      localStorage.setItem("auth_token", responseData.token);
-      // Update the table element with the message
-      const tableElement = document.getElementById("responseText");
-      //set the message
-      tableElement.textContent = responseData.message;
-      //redirect to the table
-      setTimeout(function () {
-        window.location.href = `/home/`; // Assuming responseData.table contains the table name
-      }, 1000); // 1000 milliseconds = 1 second
-    }
-  }
-*/
 });
 
 // Exporting the functions to make them globally accessible
