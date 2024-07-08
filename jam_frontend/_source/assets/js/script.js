@@ -20,6 +20,8 @@ document.body.addEventListener("htmx:configRequest", function (evt) {
 /*
 note: we had to code this becuase none of the dcoumented hx function to redirect to a new url seemed to work, 
 it may not be added yet or we may be dumb.  We look back and try to fix this later
+
+I really do not like this code we can fully integrate it into htmx using the htmx events
 */
 document.addEventListener("htmx:afterRequest", function (event) {
   // Check if the response is JSON

@@ -1,10 +1,3 @@
-/*
-todo
-
-join all the js file into one (or leave to cloudflare / ci)
-
-*/
-
 import jwt from '@tsndr/cloudflare-worker-jwt';
 
 //blacklist fields add to this if you have fields in your database you do not want apperance in the front end
@@ -96,7 +89,7 @@ export default {
 						name: 'name',
 						value: '',
 						placeHolder: 'Enter Name',
-						inputType: 'text',
+						inputType: 'select',
 						minLength: 0,
 						maxLength: 0,
 						extendedType: '',
