@@ -2,9 +2,10 @@
 todo
 
 join all the js file into one (or leave to cloudflare / ci)
-add jwt login and end point
 
 */
+
+import jwt from '@tsndr/cloudflare-worker-jwt';
 
 //blacklist fields add to this if you have fields in your database you do not want apperance in the front end
 //note : during the insert these will have to be added so we should parse it and put in correct vairables.
@@ -19,6 +20,7 @@ const blackListFields = [
 	'createdAt',
 	'updatedAt',
 	'deletedAt',
+	'authToken',
 ];
 
 export default {
@@ -372,7 +374,7 @@ export default {
 				const formAction = renderType === 'formedit' ? 'hx-put' : 'hx-post';
 				const formUrl = renderType === 'formedit' ? `${env.API_URL}${tableName}/${formData.id}` : `${env.API_URL}${tableName}/`;
 				htmlResponse = `
-            <form ${formAction}="${formUrl}" class="pure-form pure-form-stacked" hx-target="this" hx-swap="outerHTML">
+            <form ${formAction}="${formUrl}" class="pure-form pure-form-stacked" hx-target="#responseText" hx-swap="innerHTML">
                 ${formFields.join('')}
                 <button class="pure-button" type="submit">Submit</button>
                 <a class="pure-button" href="/${tableName}/">Cancel</a>
@@ -384,8 +386,26 @@ export default {
 			return htmlResponse;
 		};
 
+		const validateJWT = async (authToken) => {
+			// Verifing token
+			if (authToken != '') {
+				const isValid = await jwt.verify(authToken, env.SECRET_KEY);
+				if (isValid == true) return true;
+			}
+		};
+
+		//get the url
+		const url = new URL(request.url);
+		//get the query params
+		const searchParams = new URLSearchParams(url.search);
+		//get the auth token
+		const authToken = searchParams.get('authToken');
+
 		//get the fields for the table
 		if (request.method === 'GET') {
+			//validate the auth token
+			const jwtValid = await validateJWT(authToken);
+			if (jwtValid != true) return sendResponse(`No token: You should not be here to <a href="/">Login<a/>`, 200);
 			//get the query params
 			const currentUrl = request.headers.get('Hx-Current-Url');
 			const urlObj = new URL(currentUrl);
@@ -447,12 +467,16 @@ export default {
 		if (request.method === 'POST' || request.method === 'PUT' || request.method === 'DELETE') {
 			try {
 				//get the table name
-				const url = new URL(request.url);
 				const segments = url.pathname.split('/').filter((segment) => segment.length > 0);
 				const tableName = segments[0];
 				//set the fields
 				const id = segments[1];
 				if (request.method === 'DELETE') {
+					console.log(authToken);
+					const jwtValid = await validateJWT(authToken);
+					//validate the auth token
+					if (jwtValid != true) return sendResponse(`No token: You should not be here to <a href="/">Login<a/>`, 200);
+
 					if (!id) {
 						return sendResponse('Missing ID for deletion', 400);
 					}
@@ -465,9 +489,11 @@ export default {
 				//get the data
 				const contentType = request.headers.get('content-type');
 				const body = contentType.includes('application/json') ? await request.json() : Object.fromEntries(await request.formData());
+				//validate the auth token
+				let isValid = await validateJWT(body['authToken']);
 				//validate the data
 				const fields = Object.keys(body).filter((key) => !blackListFields.includes(key));
-				const isValid = validateData(fields);
+				isValid = validateData(fields);
 				if (!isValid) {
 					return sendResponse('Invalid data', 400);
 				}
