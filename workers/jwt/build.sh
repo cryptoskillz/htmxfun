@@ -1,26 +1,47 @@
 #!/bin/bash
 
+kill_rogue_processes() {
+    echo "Killing rogue wrangler"
+    kill -9 $(lsof -t -i:8787) 2>/dev/null
+    pkill esbuild 2>/dev/null
+}
+
+# Build local database
 if [ "$1" == "dbl" ]; then
     echo "Building local database"
-    npx wrangler d1 execute htmx --local --file=../schema.sql
+    npx wrangler d1 execute htmx --local --file=./schema.sql
+    exit 0
 fi
 
+# Build remote database
 if [ "$1" == "dbr" ]; then
-    # New block of code to run when 'db' parameter is passed
     echo "Building remote database"
-    npx wrangler d1 execute htmx --local --file=../schema.sql
+    npx wrangler d1 execute htmx --file=./schema.sql
+    exit 0
 fi
 
-# Existing code block
-echo "Killing rogue wrangler"
-kill -9 $(lsof -t -i:8788)
-pkill esbuild
+# Start local environment
+if [ "$1" == "prod" ]; then
+    echo "Starting prouction environment"
+    kill_rogue_processes
+    if lsof -Pi :8788 -sTCP:LISTEN -t >/dev/null ; then
+        echo "Port 8788 is still in use, cannot start wrangler dev"
+        exit 1
+    else
+    echo "Starting wrangler dev on port 8788"
+    npx wrangler dev --env production --port 8788
+       
+    fi
+    exit 0
+fi
 
-# Check if port 8787 is free before starting wrangler dev
+# Start production environment
+echo "Starting local environment"
+kill_rogue_processes
 if lsof -Pi :8788 -sTCP:LISTEN -t >/dev/null ; then
     echo "Port 8788 is still in use, cannot start wrangler dev"
     exit 1
 else
     echo "Starting wrangler dev on port 8788"
-    npx wrangler dev --port 8788
+    npx wrangler dev --env local --port 8788
 fi

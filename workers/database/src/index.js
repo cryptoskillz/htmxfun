@@ -19,7 +19,7 @@ const lookUpData = [
 const fieldsConfig = {
 	projects: [
 		{ name: 'id', inputType: 'integer', required: true },
-		{ name: 'name', inputType: 'text' },
+		{ name: 'name', inputType: 'text', required: true },
 		{ name: 'guid', inputType: 'text', extendedType: 'guid', disableAdd: true, disableEdit: true },
 	],
 	user: [
@@ -504,10 +504,11 @@ function renderInputField(field, formData, renderType) {
 	// Render input field
 	const value = formData[field.name] || '';
 	const disableAttr = (field.disableAdd && renderType === 'formadd') || (field.disableEdit && renderType === 'formedit') ? 'disabled' : '';
+	const requiredAttr = field.required ? 'required' : '';
 	return `
-    <label for="${field.name}">${field.name}</label>
-    <input type="${field.inputType}" id="${field.name}" name="${field.name}" value="${value}" ${disableAttr} />
-  `;
+        <label for="${field.name}">${field.name}</label>
+        <input type="${field.inputType}" id="${field.name}" name="${field.name}" value="${value}" ${disableAttr} ${requiredAttr} />
+    `;
 }
 
 /**
@@ -526,12 +527,13 @@ function renderSelectField(field, formData, lookupData) {
 			return `<option value="${option.value}" ${selectedAttr}>${option.name}</option>`;
 		})
 		.join('');
+	const requiredAttr = field.required ? 'required' : '';
 	return `
-    <label for="${field.name}">${field.name}</label>
-    <select id="${field.name}" name="${field.name}">
-      ${options}
-    </select>
-  `;
+        <label for="${field.name}">${field.name}</label>
+        <select id="${field.name}" name="${field.name}" ${requiredAttr}>
+            ${options}
+        </select>
+    `;
 }
 
 /**
