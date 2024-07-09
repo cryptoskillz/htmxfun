@@ -21,8 +21,8 @@ if [ "$1" == "dbr" ]; then
 fi
 
 # Build remote database
-if [ "$1" == "publish" ]; then
-    echo "publishing database worker"
+if [ "$1" == "deploy" ]; then
+    echo "deploying database worker"
     sudo npx wrangler deploy --env production
     exit 0
 fi
