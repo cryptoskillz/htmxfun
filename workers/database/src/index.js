@@ -29,7 +29,29 @@
 
 import jwt from '@tsndr/cloudflare-worker-jwt';
 
+// fields to ignore
 const blackListFields = ['id', 'authToken'];
+//look up data for selects
+const lookUpData = [
+	{ value: 'chris', name: 'chris' },
+	{ value: 'dave', name: 'dave' },
+	{ value: 'jonesy', name: 'jonesy' },
+];
+
+//fields to use, should be using prisma really for this
+const fieldsConfig = {
+	projects: [
+		{ name: 'id', inputType: 'integer', required: true },
+		{ name: 'name', inputType: 'text' },
+		{ name: 'guid', inputType: 'text', extendedType: 'guid', disableAdd: true, disableEdit: true },
+	],
+	user: [
+		{ name: 'id', inputType: 'number', required: true },
+		{ name: 'name', inputType: 'text', minLength: 5, maxLength: 10, required: true },
+		{ name: 'email', inputType: 'email', required: true },
+		{ name: 'username', inputType: 'text' },
+	],
+};
 
 export default {
 	async fetch(request, env, ctx) {
@@ -70,6 +92,16 @@ function handleOptions() {
 			'Access-Control-Max-Age': '86400',
 		},
 	});
+}
+
+async function getLookupData(tableName, fieldName) {
+	// Implement your logic to fetch lookup data for select fields
+	// This function should return an array of objects with 'id' and 'name' properties
+	return lookUpData;
+}
+
+function getFields(tableName) {
+	return fieldsConfig[tableName] || [];
 }
 
 async function handleGetRequest(request, env, tableName, params, authToken) {
@@ -133,23 +165,6 @@ async function parseRequestBody(request) {
 
 async function validateJWT(authToken, secretKey) {
 	return authToken ? await jwt.verify(authToken, secretKey) : false;
-}
-
-function getFields(tableName) {
-	const fieldsConfig = {
-		projects: [
-			{ name: 'id', inputType: 'integer', required: true },
-			{ name: 'name', inputType: 'text' },
-			{ name: 'guid', inputType: 'text', extendedType: 'guid', disableAdd: true, disableEdit: true },
-		],
-		user: [
-			{ name: 'id', inputType: 'number', required: true },
-			{ name: 'name', inputType: 'text', minLength: 5, maxLength: 10, required: true },
-			{ name: 'email', inputType: 'email', required: true },
-			{ name: 'username', inputType: 'text' },
-		],
-	};
-	return fieldsConfig[tableName] || [];
 }
 
 function determineRenderType(params) {
@@ -321,8 +336,8 @@ function renderInputField(field, formData, renderType) {
 function renderSelectField(field, formData, lookupData) {
 	const options = lookupData
 		.map((option) => {
-			const selectedAttr = option.id === formData[field.name] ? 'selected' : '';
-			return `<option value="${option.id}" ${selectedAttr}>${option.name}</option>`;
+			const selectedAttr = option.value === formData[field.name] ? 'selected' : '';
+			return `<option value="${option.value}" ${selectedAttr}>${option.name}</option>`;
 		})
 		.join('');
 	return `
@@ -331,15 +346,6 @@ function renderSelectField(field, formData, lookupData) {
       ${options}
     </select>
   `;
-}
-
-async function getLookupData(tableName, fieldName) {
-	// Implement your logic to fetch lookup data for select fields
-	// This function should return an array of objects with 'id' and 'name' properties
-	return [
-		{ id: 1, name: 'Option 1' },
-		{ id: 2, name: 'Option 2' },
-	];
 }
 
 async function executeQuery(db, query, returnOne = false, debug = false) {
