@@ -1,11 +1,12 @@
 /*
 		TODO: 
 
-		insert is not generating a guid automitcally 
+	
 		the add records / update record is showing the json again check the hx-swap
 		test select in render form works 
 		when you click back it will render the other forms oddly (check out why)
 
+		insert is not generating a guid automitcally *
 		view table* 
 		add record*
 		edit record (no value)*
@@ -178,17 +179,24 @@ async function getTableFields(env, tableName) {
 
 async function buildInsertQuery(tableName, env, body) {
 	const allFields = await getTableFields(env, tableName);
+
+	// Filter out blacklisted fields and 'authToken'
 	const fields = allFields.filter((field) => !blackListFields.includes(field) && field !== 'authToken');
 
+	// Generate extended data based on the fields
 	const extendedData = generateExtendedData(fields);
 	const insertFields = [];
 	const insertValues = [];
 
 	fields.forEach((field) => {
-		// Exclude fields in blacklist and 'authToken'
-		if (!blackListFields.includes(field) && body.hasOwnProperty(field)) {
+		// Check if field is present in either body or extendedData
+		if (!blackListFields.includes(field) && (body.hasOwnProperty(field) || extendedData.hasOwnProperty(field))) {
 			insertFields.push(field);
-			const value = extendedData[field] || `'${body[field]}'`;
+
+			// Get value from extended data or body and wrap in quotes if necessary
+			const value = extendedData[field] ? `'${extendedData[field]}'` : `'${body[field]}'`;
+			console.log(`Value for field ${field}:`, value);
+
 			insertValues.push(value);
 		}
 	});
@@ -209,9 +217,7 @@ function buildUpdateQuery(tableName, fields, body, id, debug = false) {
 function generateExtendedData(fields) {
 	const extendedData = {};
 	fields.forEach((field) => {
-		if (field.extendedType === 'guid') {
-			extendedData[field.name] = generateUUID();
-		}
+		if (field === 'guid') extendedData[field] = generateUUID();
 	});
 	return extendedData;
 }
@@ -305,7 +311,6 @@ async function renderForm(renderType, tableName, fields, formData, env) {
 
 function renderInputField(field, formData, renderType) {
 	const value = formData[field.name] || '';
-	console.log(formData.results);
 	const disableAttr = (field.disableAdd && renderType === 'formadd') || (field.disableEdit && renderType === 'formedit') ? 'disabled' : '';
 	return `
     <label for="${field.name}">${field.name}</label>
