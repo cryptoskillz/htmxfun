@@ -6,6 +6,7 @@ cd jwt
 echo "Publishing jwt worker"
 sudo npx wrangler deploy --env production
 cd ../..
+echo "Pushing to github master"
 git add .
 git commit -m "deploy"
-git push gitgub master
+git push github master
