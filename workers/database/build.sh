@@ -20,6 +20,13 @@ if [ "$1" == "dbr" ]; then
     exit 0
 fi
 
+# Build remote database
+if [ "$1" == "publish" ]; then
+    echo "publishing database worker"
+    sudo npx wrangler deploy --env production
+    exit 0
+fi
+
 # Start local environment
 if [ "$1" == "prod" ]; then
     echo "Starting prouction environment"
