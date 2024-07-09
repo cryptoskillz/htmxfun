@@ -8,8 +8,8 @@ join all the js file into one (or leave to cloudflare / ci)
 
 refactor
 
-exceturequery function has to fix with the fields
-add record
-edit record
-check the json rendering on add
-check the json rendering on edit
+exceturequery function has to fix with the fields*
+add record*
+edit record*
+check the json rendering on add*
+check the json rendering on edit\*
