@@ -23,7 +23,8 @@ database_id = "b9b6406b-0c3a-4e07-aa4d-3ac5e550dd53"
 # Note: Use secrets to store sensitive data.
 # - https://developers.cloudflare.com/workers/configuration/secrets/
  [vars]
- API_URL = "http://localhost:8787/"
+ #API_URL = "http://localhost:8787/"
+API_URL = "https://test3.orbitlabsworker.workers.dev"
  PROJECTS_FIELDS="id,name,guid"
  USER_FIELDS="id,name,email"
  SECRET_KEY = "ASFSDFJDSJFJDSKFSDKLJF1314234234"
