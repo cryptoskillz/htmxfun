@@ -1,34 +1,54 @@
+/*
+		TODO: 
+
+		insert is not generating a guid automitcally 
+		the add records / update record is showing the json again check the hx-swap
+		test select in render form works 
+		when you click back it will render the other forms oddly (check out why)
+
+
+		thoughts
+
+		we could uses the field list instead of the PRAGMA table_info(projects); from the setfields function as that would be easier to control 
+		if we do this then we can make the build insert query much simpleier
+
+		if we do this then buildQuery has to be updated for the insert 
+
+		buildInsertQuery does not have to exxeute the prag as we have the setfields that we can use
+
+
+
+
+		*/
+//let returnOne = true;
+
 import jwt from '@tsndr/cloudflare-worker-jwt';
 
-const blackListFields = [
-	'id',
-	'created_at',
-	'updated_at',
-	'deleted_at',
-	'isDeleted',
-	'publishedAt',
-	'adminId',
-	'createdAt',
-	'updatedAt',
-	'deletedAt',
-	'authToken',
-];
+const blackListFields = ['id'];
 
 export default {
 	async fetch(request, env, ctx) {
 		if (request.method === 'OPTIONS') {
 			return handleOptions();
 		}
-
 		const url = new URL(request.url);
-		const authToken = new URLSearchParams(url.search).get('authToken');
+		const hxUrl = new URL(request.headers.get('Hx-Current-Url'));
+		const tableName = hxUrl.pathname.split('/').filter(Boolean)[0]; // Get the first segment
+		const hxSearchParams = hxUrl.searchParams;
+		//console.log(url);
+		//console.log(hxSearchParams);
+		//console.log(tableName);
 
 		if (request.method === 'GET') {
-			return handleGetRequest(request, env, authToken);
+			const authToken = getUrlParameter(hxUrl, 'authToken') || getUrlParameter(url, 'authToken');
+			const params = Object.fromEntries(hxSearchParams.entries());
+			return handleGetRequest(request, env, tableName, params, authToken);
 		}
 
 		if (['POST', 'PUT', 'DELETE'].includes(request.method)) {
-			return handleDataModification(request, env, url, authToken);
+			const body = await parseRequestBody(request);
+			const authToken = body.authToken || getUrlParameter(hxUrl, 'authToken') || getUrlParameter(url, 'authToken');
+			return handleDataModification(request, env, id, tableName, body, authToken);
 		}
 
 		return sendResponse('Method Not Allowed', 405);
@@ -46,41 +66,16 @@ function handleOptions() {
 	});
 }
 
-async function handleGetRequest(request, env, authToken) {
+async function handleGetRequest(request, env, tableName, params, authToken) {
 	const jwtValid = await validateJWT(authToken, env.SECRET_KEY);
 	if (!jwtValid) return sendResponse('Unauthorized', 401);
-	//why are we using hx-current-url here instad of uel
-	const url = new URL(request.headers.get('Hx-Current-Url'));
-	const searchParams = new URLSearchParams(url.search);
-	const params = Object.fromEntries(searchParams.entries());
-	const tableName = url.pathname.split('/').filter(Boolean)[0];
 	const fields = getFields(tableName);
 	const fieldNames = fields.map((f) => f.name).join(',');
 	const renderType = determineRenderType(params);
-	const query = buildQuery(params, tableName, fieldNames, renderType);
+	const query = buildQuery(params, tableName, fieldNames, renderType, true);
+
 	try {
-		/*
-		TODO: 
-
-		check delete function is showing unathorised (paramater or token)
-		insert is not generating a guid automitcally 
-
-		thoughts
-
-		we could uses the field list instead of the PRAGMA table_info(projects); from the setfields function as that would be easier to control 
-		if we do this then we can make the build insert query much simpleier
-
-		if we do this then buildQuery has to be updated for the insert 
-
-		buildInsertQuery does not have to exxeute the prag as we have the setfields that we can use
-
-
-
-
-		*/
-		let returnOne = true;
-		if (renderType == 'table') returnOne = false;
-		const data = await executeQuery(env.DB, query, returnOne, true);
+		const data = await executeQuery(env.DB, query, false, true);
 		const htmlResponse = data.length === 0 ? 'No results' : await renderHTML(renderType, tableName, fields, data, env);
 		return sendResponse(htmlResponse, 200);
 	} catch (error) {
@@ -89,15 +84,9 @@ async function handleGetRequest(request, env, authToken) {
 	}
 }
 
-async function handleDataModification(request, env, url, authToken) {
-	const segments = url.pathname.split('/').filter(Boolean);
-	const tableName = segments[0];
-	const id = segments[1];
-	const body = await parseRequestBody(request);
-
-	// Validate JWT
-	const jwtToken = body.authToken || getUrlParameter(request.url, 'authToken');
-	const jwtValid = await validateJWT(jwtToken, env.SECRET_KEY);
+async function handleDataModification(request, env, id, tableName, body = '', authToken) {
+	// Validate JWT it is either in the body, request url or the x-handle-url
+	const jwtValid = await validateJWT(authToken, env.SECRET_KEY);
 	if (!jwtValid) return sendResponse('Unauthorized', 401);
 
 	if (request.method === 'DELETE') {
@@ -160,14 +149,12 @@ function determineRenderType(params) {
 	return 'table';
 }
 
-function buildQuery(params, tableName, fieldNames, renderType) {
-	if (renderType === 'formadd') {
-		return `PRAGMA table_info(${tableName});`;
-	}
-	if (renderType === 'formedit') {
-		return `SELECT * FROM ${tableName} WHERE isDeleted = 0 AND id = ${params.id}`;
-	}
-	return `SELECT ${fieldNames} FROM ${tableName} WHERE isDeleted = 0`;
+function buildQuery(params, tableName, fieldNames, renderType, debug = false) {
+	let query;
+	if (renderType === 'formedit') query = `SELECT * FROM ${tableName} WHERE isDeleted = 0 AND id = ${params.id}`;
+	else query = `SELECT ${fieldNames} FROM ${tableName} WHERE isDeleted = 0`;
+	if (debug == true) console.log(query);
+	return query;
 }
 
 function validateData(data) {
