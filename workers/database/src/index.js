@@ -6,6 +6,11 @@
 		test select in render form works 
 		when you click back it will render the other forms oddly (check out why)
 
+		view table* 
+		add record*
+		edit record (no value)*
+
+
 
 		thoughts
 
@@ -20,24 +25,24 @@
 
 
 		*/
-//let returnOne = true;
 
 import jwt from '@tsndr/cloudflare-worker-jwt';
 
-const blackListFields = ['id'];
+const blackListFields = ['id', 'authToken'];
 
 export default {
 	async fetch(request, env, ctx) {
 		if (request.method === 'OPTIONS') {
 			return handleOptions();
 		}
+
+		//sometimes depending if its a get, post, has an auth token etc it passes up the data in different ways in the url, the hxurl or in the form data this code gets it no matter were it is
 		const url = new URL(request.url);
 		const hxUrl = new URL(request.headers.get('Hx-Current-Url'));
 		const tableName = hxUrl.pathname.split('/').filter(Boolean)[0]; // Get the first segment
 		const hxSearchParams = hxUrl.searchParams;
-		//console.log(url);
-		//console.log(hxSearchParams);
-		//console.log(tableName);
+		let id = hxSearchParams.get('id'); // Get the first segment
+		if (id == null) id = url.pathname.split('/').filter(Boolean)[1];
 
 		if (request.method === 'GET') {
 			const authToken = getUrlParameter(hxUrl, 'authToken') || getUrlParameter(url, 'authToken');
@@ -72,10 +77,12 @@ async function handleGetRequest(request, env, tableName, params, authToken) {
 	const fields = getFields(tableName);
 	const fieldNames = fields.map((f) => f.name).join(',');
 	const renderType = determineRenderType(params);
-	const query = buildQuery(params, tableName, fieldNames, renderType, true);
+	const query = buildQuery(params, tableName, fieldNames, renderType, false);
 
 	try {
-		const data = await executeQuery(env.DB, query, false, true);
+		let returnOne = true;
+		if (renderType == 'table') returnOne = false;
+		const data = await executeQuery(env.DB, query, returnOne, false);
 		const htmlResponse = data.length === 0 ? 'No results' : await renderHTML(renderType, tableName, fields, data, env);
 		return sendResponse(htmlResponse, 200);
 	} catch (error) {
@@ -99,8 +106,9 @@ async function handleDataModification(request, env, id, tableName, body = '', au
 	const fields = Object.keys(body).filter((key) => !blackListFields.includes(key));
 	if (!validateData(fields)) return sendResponse('Invalid data', 400);
 
-	const sql = request.method === 'POST' ? await buildInsertQuery(tableName, env, body) : buildUpdateQuery(tableName, fields, body, id);
-	await executeQuery(env.DB, sql, true, true);
+	const sql =
+		request.method === 'POST' ? await buildInsertQuery(tableName, env, body) : buildUpdateQuery(tableName, fields, body, id, true);
+	await executeQuery(env.DB, sql, true, false);
 
 	const responseObj = {
 		message: `Record ${request.method === 'POST' ? 'added' : 'updated'} successfully`,
@@ -164,7 +172,7 @@ function validateData(data) {
 
 async function getTableFields(env, tableName) {
 	const query = `PRAGMA table_info(${tableName});`;
-	const data = await executeQuery(env.DB, query, false, true);
+	const data = await executeQuery(env.DB, query, false, false);
 	return data.results.map((row) => row.name);
 }
 
@@ -190,9 +198,12 @@ async function buildInsertQuery(tableName, env, body) {
 	return `INSERT INTO ${tableName} (${fieldNames}) VALUES (${values})`;
 }
 
-function buildUpdateQuery(tableName, fields, body, id) {
+function buildUpdateQuery(tableName, fields, body, id, debug = false) {
 	const setClause = fields.map((field) => `${field} = '${body[field]}'`).join(', ');
-	return `UPDATE ${tableName} SET ${setClause} WHERE id = ${id}`;
+	let sql;
+	sql = `UPDATE ${tableName} SET ${setClause} WHERE id = ${id}`;
+	if (debug == true) console.log(sql);
+	return sql;
 }
 
 function generateExtendedData(fields) {
@@ -222,6 +233,7 @@ async function renderHTML(renderType, tableName, fields, data, env) {
 
 	if (['formedit', 'formadd'].includes(renderType)) {
 		const formData = renderType === 'formedit' ? data : {};
+		//console.log(fields);
 		return renderForm(renderType, tableName, fields, formData, env);
 	}
 
@@ -277,9 +289,6 @@ async function renderForm(renderType, tableName, fields, formData, env) {
 				if (lookupData.length > 0) {
 					return renderSelectField(field, formData, lookupData);
 				}
-				console.log(field.name);
-				console.log(formData);
-
 				return renderInputField(field, formData, renderType);
 			})
 	);
@@ -296,6 +305,7 @@ async function renderForm(renderType, tableName, fields, formData, env) {
 
 function renderInputField(field, formData, renderType) {
 	const value = formData[field.name] || '';
+	console.log(formData.results);
 	const disableAttr = (field.disableAdd && renderType === 'formadd') || (field.disableEdit && renderType === 'formedit') ? 'disabled' : '';
 	return `
     <label for="${field.name}">${field.name}</label>
