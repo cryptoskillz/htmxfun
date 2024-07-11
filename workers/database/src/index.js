@@ -50,6 +50,14 @@ export default {
 		//get the table name
 		const tableName = hxUrl.pathname.split('/').filter(Boolean)[0]; // Get the first segment
 		const hxSearchParams = hxUrl.searchParams;
+
+		//console.log('url');
+		// console.log(url);
+		//console.log('hxUrl');
+		//console.log(hxUrl);
+
+		const workerAction = getUrlParameter(url, 'workerAction') || getUrlParameter(url, 'workerAction');
+		//console.log(workerAction);
 		//get the id
 		let id = hxSearchParams.get('id'); // Get the first segment
 		if (id == null) id = url.pathname.split('/').filter(Boolean)[1];
@@ -60,7 +68,7 @@ export default {
 			// get the params
 			const params = Object.fromEntries(hxSearchParams.entries());
 			// Handle GET request
-			return handleGetRequest(request, env, tableName, params, authToken);
+			return handleGetRequest(request, env, tableName, params, authToken, workerAction);
 		}
 		// Handle GET, POST, PUT, DELETE
 		if (['POST', 'PUT', 'DELETE'].includes(request.method)) {
@@ -109,9 +117,6 @@ async function getLookupData(tableName, fieldName) {
  * @param {string} tableName - The name of the table to retrieve fields configuration for.
  * @return {Array} The fields configuration for the specified table name, or an empty array if not found.
  */
-function getFields(tableName) {
-	return fieldsConfig[tableName] || [];
-}
 
 /**
  * Handles the GET request by validating JWT, retrieving fields, determining render type, building query,
@@ -124,27 +129,35 @@ function getFields(tableName) {
  * @param {string} authToken - The authentication token for validation.
  * @return {Response} The response object based on the query execution and rendering.
  */
-async function handleGetRequest(request, env, tableName, params, authToken) {
+async function handleGetRequest(request, env, tableName, params, authToken, workerAction = '') {
 	// Validate JWT
 	const jwtValid = await validateJWT(authToken, env.SECRET_KEY);
 	if (!jwtValid) return sendResponse('Unauthorized', 401);
-	// Retrieve fields
-	const fields = getFields(tableName);
-	// get the field names
-	const fieldNames = fields.map((f) => f.name).join(',');
-	// Determine render type
+	let query;
+	let data;
+	let fields;
+	let fieldNames;
+	let returnOne = true;
+	// get the render type
 	const renderType = determineRenderType(params);
-	// Build query
-	const query = buildQuery(params, tableName, fieldNames, renderType, false);
-
-	try {
+	if (workerAction == 'listTables') {
+		fields = fieldsConfig;
+		fieldNames = '';
+	} else {
+		// get the fields
+		fields = fieldsConfig[tableName];
+		// get the field names
+		fieldNames = fields.map((f) => f.name).join(',');
 		//set one or all records
-		let returnOne = true;
 		if (renderType == 'table') returnOne = false;
-		// Execute query
-		const data = await executeQuery(env.DB, query, returnOne, false);
+		// Build query
+		query = buildQuery(params, tableName, fieldNames, renderType, false);
+		data = await executeQuery(env.DB, query, returnOne, false);
+	}
+	// Retrieve fields
+	try {
 		// Render HTML
-		const htmlResponse = data.length === 0 ? 'No results' : await renderHTML(renderType, tableName, fields, data, env);
+		const htmlResponse = await renderHTML(renderType, tableName, fields, data, env, workerAction);
 		// Send response
 		return sendResponse(htmlResponse, 200);
 	} catch (error) {
@@ -260,11 +273,13 @@ function determineRenderType(params) {
  */
 function buildQuery(params, tableName, fieldNames, renderType, debug = false) {
 	let query;
+
 	//get the query based on the render type
 	if (renderType === 'formedit') query = `SELECT * FROM ${tableName} WHERE isDeleted = 0 AND id = ${params.id}`;
 	else query = `SELECT ${fieldNames} FROM ${tableName} WHERE isDeleted = 0`;
 	//check if we in debug mode
 	if (debug == true) console.log(query);
+
 	//return the query
 	return query;
 }
@@ -391,11 +406,11 @@ function generateUUID() {
  * @param {Object} env - The environment object containing configuration settings.
  * @return {Promise<string>} A promise that resolves to the rendered HTML.
  */
-async function renderHTML(renderType, tableName, fields, data, env) {
+async function renderHTML(renderType, tableName, fields, data, env, workerAction = '') {
 	//check render type
-	if (renderType === 'table') {
+	if (renderType === 'table' || workerAction == 'listTables') {
 		//render table
-		return renderTable(fields, data, tableName, env);
+		return renderTable(fields, data, tableName, env, workerAction);
 	}
 
 	if (['formedit', 'formadd'].includes(renderType)) {
@@ -417,41 +432,67 @@ async function renderHTML(renderType, tableName, fields, data, env) {
  * @param {Object} env - The environment object containing configuration settings.
  * @return {string} The rendered HTML table.
  */
-function renderTable(fields, data, tableName, env) {
-	const rows = data.results; // Access the results array from data
-	// Render table
-	const headers = fields.map((field) => `<th class="px-4 py-2">${field.name}</th>`).join('');
-	const bodyRows = rows
-		.map(
-			(row) => `
-            <tr>
-                ${fields.map((field) => `<td>${row[field.name]}</td>`).join('')}
-                <td>
-                    <a class="pure-button" href="/${tableName}/edit/?id=${row.id}">Edit</a>
-                    <button class="pure-button" hx-delete="${env.API_URL}${tableName}/${row.id}" 
-                                    hx-trigger='confirmed'
-                                    hx-target="#responseText"
-                                    hx-swap="innerHTML"
-                                    onClick="Swal.fire({title: 'Delete Record',showCancelButton: true, text:'Do you want to continue?'}).then((result)=>{
-                                        if(result.isConfirmed){
-                                            htmx.trigger(this, 'confirmed');  
-                                        } 
-                                    })">
-                                    Delete
-                    </button>
-                </td>
-            </tr>
-        `
-		)
-		.join('');
-	return `
-        <table class="pure-table">
-            <thead>
-                <tr>${headers}<th class="px-4 py-2">Action</th></tr>
-            </thead>
-            <tbody>${bodyRows}</tbody>
-        </table>
-    `;
+function renderTable(fields, data, tableName, env, workerAction) {
+	if (workerAction === 'listTables') {
+		// List table names
+		const tableNames = Object.keys(fields);
+		const tableList = tableNames
+			.map(
+				(name) => `<tr>
+			<td>${name}</td>
+			<td><a href="/${name}/" class="pure-button">View</a></td>
+			</tr>`
+			)
+			.join('');
+		return `
+		
+          <table class="pure-table">
+				<thead>
+					<tr>
+						<th class="px-4 py-2">Tables</th>
+						<th class="px-4 py-2">Action</th>
+					</tr>
+				</thead>
+				<tbody>${tableList}</tbody>
+			</table>
+        `;
+	} else {
+		const rows = data.results; // Access the results array from data
+		// Render specific table
+		const headers = fields.map((field) => `<th class="px-4 py-2">${field.name}</th>`).join('');
+		const bodyRows = rows
+			.map(
+				(row) => `
+			<tr>
+				${fields.map((field) => `<td>${row[field.name]}</td>`).join('')}
+				<td>
+					<a class="pure-button" href="/${tableName}/edit/?id=${row.id}">Edit</a>
+					<button class="pure-button" hx-delete="${env.API_URL}${tableName}/${row.id}" 
+							hx-trigger='confirmed'
+							hx-target="#responseText"
+							hx-swap="innerHTML"
+							onClick="Swal.fire({title: 'Delete Record',showCancelButton: true, text:'Do you want to continue?'}).then((result)=>{
+								if(result.isConfirmed){
+									htmx.trigger(this, 'confirmed');  
+								} 
+							})">
+							Delete
+					</button>
+				</td>
+			</tr>
+		`
+			)
+			.join('');
+
+		return `
+			<table class="pure-table">
+				<thead>
+					<tr>${headers}<th class="px-4 py-2">Action</th></tr>
+				</thead>
+				<tbody>${bodyRows}</tbody>
+			</table>
+		`;
+	}
 }
 
 /**

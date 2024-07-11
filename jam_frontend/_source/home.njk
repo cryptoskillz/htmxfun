@@ -3,25 +3,11 @@ layout: layout
 title: "home"
 ---
 
-<table class="pure-table">
-  <thead>
-    <tr>
-      <th class="px-4 py-2">Table</th>
-      <th class="px-4 py-2">Action</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>Projects</td>
-      <td>
-        <a class="pure-button" href="/projects/">Manage</a>
-      </td>
-    </tr>
-    <tr>
-      <td>User</td>
-      <td>
-        <a class="pure-button" href="/user/">Manage</a>
-      </td>
-    </tr>
-  </tbody>
-</table>
+<div id="table" hx-get="{{ API_URL }}" hx-trigger="load" hx-vals="">
+  <img
+    alt="Result loading..."
+    class="htmx-indicator"
+    width="150"
+    src="/assets/img/bars.svg"
+  />
+</div>
