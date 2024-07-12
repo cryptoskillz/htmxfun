@@ -6,7 +6,7 @@ title: "signup"
 <div>
   <form
     hx-post="{{ API_JWT_URL }}"
-    hx-vals="{workerAction: listTables}"
+    hx-vals='{"workerAction": "doSignup"}'
     hx-target="#responseText"
     hx-swap="innerHTML"
     class="pure-form pure-form-stacked"
