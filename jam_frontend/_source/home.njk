@@ -3,7 +3,12 @@ layout: layout
 title: "home"
 ---
 
-<div id="table" hx-get="{{ API_URL }}" hx-trigger="load" hx-vals="">
+<div
+  id="table"
+  hx-get="{{ API_URL }}"
+  hx-vals='{"workerAction": "listTables"}'
+  hx-trigger="load"
+>
   <img
     alt="Result loading..."
     class="htmx-indicator"

@@ -52,7 +52,7 @@ export default {
 		const hxSearchParams = hxUrl.searchParams;
 
 		//console.log('url');
-		// console.log(url);
+		//console.log(url);
 		//console.log('hxUrl');
 		//console.log(hxUrl);
 
@@ -79,7 +79,7 @@ export default {
 			// Handle GET request
 			return handleDataModification(request, env, id, tableName, body, authToken);
 		}
-
+		//s
 		return sendResponse('Method Not Allowed', 405);
 	},
 };

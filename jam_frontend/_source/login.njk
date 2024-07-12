@@ -1,0 +1,33 @@
+---
+layout: layout
+title: "login"
+---
+
+<div>
+  <form
+    hx-post="{{ API_JWT_URL }}"
+    hx-vals='{"workerAction": "doLogin"}'
+    hx-target="#responseText"
+    hx-swap="innerHTML"
+    class="pure-form pure-form-stacked"
+  >
+    <label for="inpLogin"> Login </label>
+    <input
+      type="email"
+      name="email"
+      placeholder="enter email"
+      id="email"
+      required
+    />
+    <label for="inpPassword"> Password </label>
+    <input
+      type="password"
+      name="password"
+      placeholder="enter password"
+      id="password"
+      required
+    />
+    <button class="pure-button" type="submit">Login</button>
+    <a href="/signup/" class="pure-button">Signup</a>
+  </form>
+</div>

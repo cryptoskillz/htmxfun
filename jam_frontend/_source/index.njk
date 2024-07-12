@@ -4,28 +4,9 @@ title: "index"
 ---
 
 <div>
-  <form
-    hx-post="{{ API_JWT_URL }}"
-    hx-target="#responseText"
-    hx-swap="innerHTML"
-    class="pure-form pure-form-stacked"
-  >
-    <label for="inpLogin"> Login </label>
-    <input
-      type="email"
-      name="email"
-      placeholder="enter email"
-      id="email"
-      required
-    />
-    <label for="inpPassword"> Password </label>
-    <input
-      type="password"
-      name="password"
-      placeholder="enter password"
-      id="password"
-      required
-    />
-    <button class="pure-button" type="submit">Login</button>
+    Welcome to HMTX fun login or sign up !
+    <a href="/login/" class="pure-button">Login</a>
+    <br>
+    <a href="/signup/" class="pure-button">Signup</a>
   </form>
 </div>
