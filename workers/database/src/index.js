@@ -191,7 +191,12 @@ async function handleDataModification(request, env, id, tableName, body = '', au
 		// execute the query
 		await executeQuery(env.DB, sql);
 		// send the response
-		return sendResponse('Record deleted successfully', 200);
+		const responseObj = {
+			message: `Record deleted successfully`,
+			workerAction: 'doDelete',
+			statusText: 'OK',
+		};
+		return sendResponse(responseObj, 200, 'application/json');
 	}
 	//get the fields and remove the ones in the blocklist
 	const fields = Object.keys(body).filter((key) => !blackListFields.includes(key));
