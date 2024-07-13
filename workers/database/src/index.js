@@ -80,7 +80,7 @@ export default {
 			return handleDataModification(request, env, id, tableName, body, authToken);
 		}
 		//s
-		return sendResponse('Method Not Allowed', 405);
+		return sendResponse('Method Not Allowed', 405, 'application/json');
 	},
 };
 
@@ -132,7 +132,7 @@ async function getLookupData(tableName, fieldName) {
 async function handleGetRequest(request, env, tableName, params, authToken, workerAction = '') {
 	// Validate JWT
 	const jwtValid = await validateJWT(authToken, env.SECRET_KEY);
-	if (!jwtValid) return sendResponse('Unauthorized', 401);
+	if (!jwtValid) return sendResponse('Unauthorized', 401, 'application/json');
 	let query;
 	let data;
 	let fields;
@@ -158,11 +158,12 @@ async function handleGetRequest(request, env, tableName, params, authToken, work
 	try {
 		// Render HTML
 		const htmlResponse = await renderHTML(renderType, tableName, fields, data, env, workerAction);
+
 		// Send response
 		return sendResponse(htmlResponse, 200);
 	} catch (error) {
 		console.error('Error executing query:', error);
-		return sendResponse(`Error executing query: ${error.message}`, 500);
+		return sendResponse(`Error executing query: ${error.message}`, 500, 'application/json');
 	}
 }
 
@@ -180,7 +181,7 @@ async function handleGetRequest(request, env, tableName, params, authToken, work
 async function handleDataModification(request, env, id, tableName, body = '', authToken) {
 	// Validate JWT it is either in the body, request url or the x-handle-url
 	const jwtValid = await validateJWT(authToken, env.SECRET_KEY);
-	if (!jwtValid) return sendResponse('Unauthorized', 401);
+	if (!jwtValid) return sendResponse('Unauthorized', 401, 'application/json');
 	// Handle DELETE request
 	if (request.method === 'DELETE') {
 		if (!id) return sendResponse('Missing ID for deletion', 400);

@@ -71,22 +71,28 @@ export default {
 		 * @param {type} theCode - The status code of the response.
 		 * @param {type} theType - The content type of the response (default is 'text/html').
 		 * @return {type} The response object.
+		 *
+		 * note: I switched the default contentType to application/json as thia worker does not return any html
 		 */
-		const sendResponse = (theMessage, theCode, theType = 'text/html') => {
-			return new Response(theMessage, {
-				status: theCode,
-				headers: {
-					'Access-Control-Allow-Origin': '*',
-					'Content-Type': theType,
-				},
+
+		function sendResponse(body, status = 200, contentType = 'application/json') {
+			// Add CORS headers based on content type
+			if (contentType == 'application/json') body = JSON.stringify(body);
+			const headers = {
+				'Content-Type': contentType,
+				'Access-Control-Allow-Origin': '*',
+			};
+			// Send response
+			return new Response(body, {
+				status,
+				headers,
 			});
-		};
+		}
 
 		let data;
 		let query;
 		let responseObj;
 		// Handle POST request
-
 		if (request.method === 'POST') {
 			const body = await parseRequestBody(request);
 			if (body.workerAction == 'doSignup') {
@@ -96,9 +102,10 @@ export default {
 				if (data.total != 0) {
 					responseObj = {
 						message: `User already exists`,
+						workerAction: body.workerAction,
 						statusText: 'OK',
 					};
-					return sendResponse(JSON.stringify(responseObj), 200, 'application/json');
+					return sendResponse(responseObj, 401, 'application/json');
 				} else {
 					let apiSecret = uuid.v4();
 					let verifyCode = uuid.v4();
@@ -111,6 +118,7 @@ export default {
 						postmarkapp.com/
 
 						and the code looks something like this 
+
 						const data = {
                         "templateId": context.env.SIGNUPEMAILTEMPLATEID,
                         "to": registerData.email,
@@ -139,17 +147,19 @@ export default {
 
 					*/
 
-						https: responseObj = {
+						responseObj = {
 							message: `Signup successfull`,
+							workerAction: body.workerAction,
 							statusText: 'OK',
 						};
 					} else {
 						responseObj = {
 							message: `Signup not successfull`,
+							workerAction: body.workerAction,
 							statusText: 'OK',
 						};
 					}
-					return sendResponse(JSON.stringify(responseObj), 200, 'application/json');
+					return sendResponse(responseObj, 200, 'application/json');
 				}
 			}
 			if (body.workerAction == 'doLogin') {
@@ -169,10 +179,18 @@ export default {
 					const responseObj = {
 						message: `Login successfull`,
 						token: token,
+						workerAction: body.workerAction,
 						statusText: 'OK',
 					};
-					return sendResponse(JSON.stringify(responseObj), 200, 'application/json');
-				} else return sendResponse('wrong email or password', 200);
+					return sendResponse(responseObj, 200, 'application/json');
+				} else {
+					const responseObj = {
+						message: `wrong email or password`,
+						workerAction: body.workerAction,
+						statusText: 'OK',
+					};
+					return sendResponse(responseObj, 401);
+				}
 			}
 		} else {
 			// Handle other methods (PUT, DELETE, etc.)
