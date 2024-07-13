@@ -33,30 +33,23 @@ deploy_workers() {
 sync_databases() {
     #todo
     echo "Syncing databases"
+    cp -R workers/jwt/.wrangler/state/v3/d1/miniflare-D1DatabaseObject/ workers/database/.wrangler/state/v3/d1/miniflare-D1DatabaseObject/
+
 }
 
-start_workers() {
-    jwt_dir="workers/jwt"
-    database_dir="workers/database"
-    email_dir="workers/email"
 
-    # Start wrangler dev in each directory
-    start_wrangler() {
-        local dir=$1
-        local port=$2
-        echo "Starting wrangler dev in $dir on port $port"
-        cd "$dir" || exit 1
-        npx wrangler dev --env local --port "$port" &
-        cd - > /dev/null || exit 1
-    }
 
-    # Start workers
-    start_wrangler "$jwt_dir" 8789
-    start_wrangler "$database_dir" 8790  # Example: different port for database
-    start_wrangler "$email_dir" 8791    # Example: different port for email
-
-    echo "All workers started."
+# Start wrangler dev 
+start_wrangler() {
+    local dir=$1
+    local port=$2
+    echo "Starting wrangler dev in $dir on port $port"
+    cd "$dir" || exit 1
+    npx wrangler dev --env local --port "$port" &
+    cd - > /dev/null || exit 1
 }
+
+
 
 # Main script logic based on command-line argument
 if [ "$1" == "kill" ]; then
@@ -64,7 +57,10 @@ if [ "$1" == "kill" ]; then
 elif [ "$1" == "sync" ]; then
     sync_databases
 elif [ "$1" == "start" ]; then
-    start_workers
+    # Start workers
+    start_wrangler "workers/jwt" 8787
+    start_wrangler "workers/database" 8788  # Example: different port for database
+    start_wrangler "workers/email" 8789    # Example: different port for email
 elif [ "$1" == "deploy" ]; then
     deploy_workers
 else
