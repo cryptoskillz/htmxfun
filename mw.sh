@@ -23,11 +23,6 @@ deploy_workers() {
     echo "Publishing email worker"
     sudo npx wrangler deploy --env production
     cd ../..
-    #this is dumb lets do this via PR
-    #echo "Pushing to github master"
-    #git add .
-    #git commit -a -m "deploy"
-    #git push github master
 }
 
 sync_databases() {
@@ -36,7 +31,6 @@ sync_databases() {
     cp -R workers/jwt/.wrangler/state/v3/d1/miniflare-D1DatabaseObject/ workers/database/.wrangler/state/v3/d1/miniflare-D1DatabaseObject/
 
 }
-
 
 
 # Start wrangler dev 
@@ -48,7 +42,6 @@ start_wrangler() {
     npx wrangler dev --env local --port "$port" &
     cd - > /dev/null || exit 1
 }
-
 
 
 # Main script logic based on command-line argument
