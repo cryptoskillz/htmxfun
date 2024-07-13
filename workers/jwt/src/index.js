@@ -117,35 +117,33 @@ export default {
 						note we use postmark which can be found here 
 						postmarkapp.com/
 
-						and the code looks something like this 
+						*/
 
 						const data = {
-                        "templateId": context.env.SIGNUPEMAILTEMPLATEID,
-                        "to": registerData.email,
-                        "templateVariables": {
-								"name": `${registerData.username}`,
-								"product_name": `${context.env.PRODUCTNAME}`,
-								"action_url": `${context.env.ADMINURL}verify?verifycode=${verifyCode}`,
-								"login_url": `${context.env.ADMINURL}account-login`,
-								"username": `${registerData.username}`,
-								"sender_name": `${context.env.SENDEREMAILNAME}`
-							}
+							templateId: env.SIGNUPEMAILTEMPLATEID,
+							to: body.email,
+							templateVariables: {
+								name: ``,
+								product_name: `${env.PRODUCTNAME}`,
+								action_url: `${env.ADMINURL}verify?verifycode=${verifyCode}`,
+								login_url: `${env.ADMINURL}account-login`,
+								username: ``,
+								sender_name: `${env.SENDEREMAILNAME}`,
+							},
 						};
 
 						//call the cloudflare API for a one time URL
-						const responseEmail = await fetch(context.env.EMAILAPIURL, {
-							method: "POST",
+						const responseEmail = await fetch(env.EMAILAPIURL, {
+							method: 'POST',
 							headers: {
-								"Content-Type": "application/json"
+								'Content-Type': 'application/json',
 							},
-							body: JSON.stringify(data)
+							body: JSON.stringify(data),
 						});
+						console.log(responseEmail);
 						//get the repsonse
 						const emailResponse = await responseEmail.json();
-
-						obviously, I have left this out of the public repo or you would just spam from my account
-
-					*/
+						console.log(emailResponse);
 
 						responseObj = {
 							message: `Signup successfull`,

@@ -1,12 +1,18 @@
 /**
 
+
+TODO
+
+
+
  */
 
 export default {
-	async fetch(request, env, ctx) {
+	async fetch(request, env) {
+		console.log(env);
 		if (request.method == 'POST') {
 			let method = '';
-			theData = await request.json();
+			const theData = await request.json();
 			const data = {
 				From: `${env.EMAILFROM}`,
 				To: `${theData.to}`,
@@ -22,7 +28,7 @@ export default {
 				if (theData.textBody != void 0) data.TextBody = theData.textBody;
 				if (theData.htmlBody != void 0) data.HextBody = theData.htmlBody;
 			}
-			console.log(EMAILAPI + method);
+			console.log(env.EMAILAPI + method);
 			const options = {
 				method: 'POST',
 				headers: {

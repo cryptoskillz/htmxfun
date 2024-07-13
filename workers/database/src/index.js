@@ -140,6 +140,7 @@ async function handleGetRequest(request, env, tableName, params, authToken, work
 	let returnOne = true;
 	// get the render type
 	const renderType = determineRenderType(params);
+	// check if we want to return all the tables in the database to list in the home screen
 	if (workerAction == 'listTables') {
 		fields = fieldsConfig;
 		fieldNames = '';
