@@ -3,3 +3,4 @@ workers/.wrangler/
 jam_frontend/node_modules/
 jam_frontend/_site/
 .gitignore
+workers/email/wrangler.toml

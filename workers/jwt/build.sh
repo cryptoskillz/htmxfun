@@ -2,7 +2,7 @@
 
 kill_rogue_processes() {
     echo "Killing rogue wrangler"
-    kill -9 $(lsof -t -i:8787) 2>/dev/null
+    kill -9 $(lsof -t -i:8788) 2>/dev/null
     pkill esbuild 2>/dev/null
 }
 
