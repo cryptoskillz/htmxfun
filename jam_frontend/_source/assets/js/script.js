@@ -64,6 +64,11 @@ document.addEventListener("htmx:afterRequest", function (event) {
         return;
       }
 
+      //set the response message
+      responseElement.textContent = responseData.message;
+      //call the timeout
+      timeout(responseElement);
+
       //check the worker action
       switch (responseData.workerAction) {
         case "doSignup":
@@ -79,10 +84,6 @@ document.addEventListener("htmx:afterRequest", function (event) {
             targetRow.remove();
           }
           break;
-        default:
-          //update the repsonse element as there is matching workerelement in the JSON
-          responseElement.textContent = responseData.message;
-          timeout(responseElement);
       }
 
       //check if there is a redirect
