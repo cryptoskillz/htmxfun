@@ -535,6 +535,7 @@ async function renderForm(renderType, tableName, fields, formData, env) {
         <form class="pure-form pure-form-stacked" ${formAction}="${formUrl}" hx-target="#responseText" hx-swap="innerHTML">
             ${formFields.join('')}
             <button type="submit" class="pure-button pure-button-primary">${renderType === 'formedit' ? 'Update' : 'Add'}</button>
+			<a href="javascript:history.back()"  class="pure-button pure-button-primary">Back</a>
         </form>
     `;
 }
