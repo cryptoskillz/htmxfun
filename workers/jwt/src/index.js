@@ -111,19 +111,20 @@ export default {
 					let verifyCode = uuid.v4();
 					query = `INSERT INTO user (email,password,apiSecret,confirmed,isBlocked,isAdmin,verifyCode) VALUES ('${body.email}','${body.password}','${apiSecret}',0, 0,0,'${verifyCode}')`;
 					data = await executeQuery(env.DB, query, false, false);
-					data.success = true;
+					//debug ghost out the line and emable the enable
+					//data.success = true;
 					if (data.success == true) {
 						//send the email
 						/*
 						note we use postmark which can be found here 
 						postmarkapp.com/
 						*/
-
+						console.log(body.email.split('@')[0]);
 						const data = {
 							templateId: env.SIGNUP_EMAIL_TEMPLATE_ID,
 							to: body.email,
 							templateVariables: {
-								name: ``,
+								name: `${body.email.split('@')[0]}`,
 								product_name: `${env.PRODUC_TNAME}`,
 								action_url: `${env.API_URL}verify?verifycode=${verifyCode}`,
 								login_url: `${env.API_URL}account-login`,
