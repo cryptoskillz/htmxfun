@@ -80,7 +80,7 @@ export default {
 			return handleDataModification(request, env, id, tableName, body, authToken);
 		}
 		//s
-		return sendResponse('Method Not Allowed', 405);
+		return sendResponse('Method Not Allowed', 405, 'application/json');
 	},
 };
 
@@ -132,7 +132,7 @@ async function getLookupData(tableName, fieldName) {
 async function handleGetRequest(request, env, tableName, params, authToken, workerAction = '') {
 	// Validate JWT
 	const jwtValid = await validateJWT(authToken, env.SECRET_KEY);
-	if (!jwtValid) return sendResponse('Unauthorized', 401);
+	if (!jwtValid) return sendResponse('Unauthorized', 401, 'application/json');
 	let query;
 	let data;
 	let fields;
@@ -140,6 +140,7 @@ async function handleGetRequest(request, env, tableName, params, authToken, work
 	let returnOne = true;
 	// get the render type
 	const renderType = determineRenderType(params);
+	// check if we want to return all the tables in the database to list in the home screen
 	if (workerAction == 'listTables') {
 		fields = fieldsConfig;
 		fieldNames = '';
@@ -158,11 +159,12 @@ async function handleGetRequest(request, env, tableName, params, authToken, work
 	try {
 		// Render HTML
 		const htmlResponse = await renderHTML(renderType, tableName, fields, data, env, workerAction);
+
 		// Send response
 		return sendResponse(htmlResponse, 200);
 	} catch (error) {
 		console.error('Error executing query:', error);
-		return sendResponse(`Error executing query: ${error.message}`, 500);
+		return sendResponse(`Error executing query: ${error.message}`, 500, 'application/json');
 	}
 }
 
@@ -180,7 +182,7 @@ async function handleGetRequest(request, env, tableName, params, authToken, work
 async function handleDataModification(request, env, id, tableName, body = '', authToken) {
 	// Validate JWT it is either in the body, request url or the x-handle-url
 	const jwtValid = await validateJWT(authToken, env.SECRET_KEY);
-	if (!jwtValid) return sendResponse('Unauthorized', 401);
+	if (!jwtValid) return sendResponse('Unauthorized', 401, 'application/json');
 	// Handle DELETE request
 	if (request.method === 'DELETE') {
 		if (!id) return sendResponse('Missing ID for deletion', 400);
@@ -190,7 +192,12 @@ async function handleDataModification(request, env, id, tableName, body = '', au
 		// execute the query
 		await executeQuery(env.DB, sql);
 		// send the response
-		return sendResponse('Record deleted successfully', 200);
+		const responseObj = {
+			message: `Record deleted successfully`,
+			workerAction: 'doDelete',
+			statusText: 'OK',
+		};
+		return sendResponse(responseObj, 200, 'application/json');
 	}
 	//get the fields and remove the ones in the blocklist
 	const fields = Object.keys(body).filter((key) => !blackListFields.includes(key));
@@ -529,6 +536,7 @@ async function renderForm(renderType, tableName, fields, formData, env) {
         <form class="pure-form pure-form-stacked" ${formAction}="${formUrl}" hx-target="#responseText" hx-swap="innerHTML">
             ${formFields.join('')}
             <button type="submit" class="pure-button pure-button-primary">${renderType === 'formedit' ? 'Update' : 'Add'}</button>
+			<a href="javascript:history.back()"  class="pure-button pure-button-primary">Cancel</a>
         </form>
     `;
 }

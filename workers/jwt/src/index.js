@@ -71,22 +71,28 @@ export default {
 		 * @param {type} theCode - The status code of the response.
 		 * @param {type} theType - The content type of the response (default is 'text/html').
 		 * @return {type} The response object.
+		 *
+		 * note: I switched the default contentType to application/json as thia worker does not return any html
 		 */
-		const sendResponse = (theMessage, theCode, theType = 'text/html') => {
-			return new Response(theMessage, {
-				status: theCode,
-				headers: {
-					'Access-Control-Allow-Origin': '*',
-					'Content-Type': theType,
-				},
+
+		function sendResponse(body, status = 200, contentType = 'application/json') {
+			// Add CORS headers based on content type
+			if (contentType == 'application/json') body = JSON.stringify(body);
+			const headers = {
+				'Content-Type': contentType,
+				'Access-Control-Allow-Origin': '*',
+			};
+			// Send response
+			return new Response(body, {
+				status,
+				headers,
 			});
-		};
+		}
 
 		let data;
 		let query;
 		let responseObj;
 		// Handle POST request
-
 		if (request.method === 'POST') {
 			const body = await parseRequestBody(request);
 			if (body.workerAction == 'doSignup') {
@@ -96,60 +102,63 @@ export default {
 				if (data.total != 0) {
 					responseObj = {
 						message: `User already exists`,
+						workerAction: body.workerAction,
 						statusText: 'OK',
 					};
-					return sendResponse(JSON.stringify(responseObj), 200, 'application/json');
+					return sendResponse(responseObj, 401, 'application/json');
 				} else {
 					let apiSecret = uuid.v4();
 					let verifyCode = uuid.v4();
 					query = `INSERT INTO user (email,password,apiSecret,confirmed,isBlocked,isAdmin,verifyCode) VALUES ('${body.email}','${body.password}','${apiSecret}',0, 0,0,'${verifyCode}')`;
 					data = await executeQuery(env.DB, query, false, false);
+					//debug ghost out the line and emable the enable
+					//data.success = true;
 					if (data.success == true) {
 						//send the email
 						/*
 						note we use postmark which can be found here 
 						postmarkapp.com/
-
-						and the code looks something like this 
+						*/
+						console.log(body.email.split('@')[0]);
 						const data = {
-                        "templateId": context.env.SIGNUPEMAILTEMPLATEID,
-                        "to": registerData.email,
-                        "templateVariables": {
-								"name": `${registerData.username}`,
-								"product_name": `${context.env.PRODUCTNAME}`,
-								"action_url": `${context.env.ADMINURL}verify?verifycode=${verifyCode}`,
-								"login_url": `${context.env.ADMINURL}account-login`,
-								"username": `${registerData.username}`,
-								"sender_name": `${context.env.SENDEREMAILNAME}`
-							}
+							templateId: env.SIGNUP_EMAIL_TEMPLATE_ID,
+							to: body.email,
+							templateVariables: {
+								name: `${body.email.split('@')[0]}`,
+								product_name: `${env.PRODUC_TNAME}`,
+								action_url: `${env.API_URL}verify?verifycode=${verifyCode}`,
+								login_url: `${env.API_URL}account-login`,
+								username: ``,
+								sender_name: `${env.SENDER_EMAIL_NAME}`,
+							},
 						};
 
 						//call the cloudflare API for a one time URL
-						const responseEmail = await fetch(context.env.EMAILAPIURL, {
-							method: "POST",
+						const responseEmail = await fetch(env.EMAIL_API_URL, {
+							method: 'POST',
 							headers: {
-								"Content-Type": "application/json"
+								'Content-Type': 'application/json',
 							},
-							body: JSON.stringify(data)
+							body: JSON.stringify(data),
 						});
+						//xconsole.log(responseEmail);
 						//get the repsonse
 						const emailResponse = await responseEmail.json();
+						//xconsole.log(emailResponse);
 
-						obviously, I have left this out of the public repo or you would just spam from my account
-
-					*/
-
-						https: responseObj = {
+						responseObj = {
 							message: `Signup successfull`,
+							workerAction: body.workerAction,
 							statusText: 'OK',
 						};
 					} else {
 						responseObj = {
 							message: `Signup not successfull`,
+							workerAction: body.workerAction,
 							statusText: 'OK',
 						};
 					}
-					return sendResponse(JSON.stringify(responseObj), 200, 'application/json');
+					return sendResponse(responseObj, 200, 'application/json');
 				}
 			}
 			if (body.workerAction == 'doLogin') {
@@ -169,10 +178,18 @@ export default {
 					const responseObj = {
 						message: `Login successfull`,
 						token: token,
+						workerAction: body.workerAction,
 						statusText: 'OK',
 					};
-					return sendResponse(JSON.stringify(responseObj), 200, 'application/json');
-				} else return sendResponse('wrong email or password', 200);
+					return sendResponse(responseObj, 200, 'application/json');
+				} else {
+					const responseObj = {
+						message: `wrong email or password`,
+						workerAction: body.workerAction,
+						statusText: 'OK',
+					};
+					return sendResponse(responseObj, 401);
+				}
 			}
 		} else {
 			// Handle other methods (PUT, DELETE, etc.)

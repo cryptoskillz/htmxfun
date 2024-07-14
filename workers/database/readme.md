@@ -4,7 +4,7 @@ builds the worker locally
 
 ./build.sh prod
 
-builds the production workwe
+builds the production worker
 
 ./build.sh dbl
 

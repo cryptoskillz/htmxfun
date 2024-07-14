@@ -1,8 +1,11 @@
 ---
-layout: layout
+layout: layout_external
 title: "signup"
 ---
 
+<div class="pure-g">
+  <div class="pure-u-1">Fill in the details to Signup</div>
+</div>
 <div>
   <form
     hx-post="{{ API_JWT_URL }}"
@@ -11,7 +14,7 @@ title: "signup"
     hx-swap="innerHTML"
     class="pure-form pure-form-stacked"
   >
-    <label for="inpLogin"> Login </label>
+    <label for="inpLogin"> Email </label>
     <input
       type="email"
       name="email"
@@ -28,6 +31,6 @@ title: "signup"
       required
     />
     <button class="pure-button" type="submit">Signup</button>
+    <a href="/login" class="pure-button">Login</a>
   </form>
-  <a href="/login" class="pure-button">Login</a>
 </div>

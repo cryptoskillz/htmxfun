@@ -1,6 +1,8 @@
 TODO
 
+update buildit.js to use arrays of data to make multiple pages
+upgrade email to mailchannels https://www.fadhil-blog.dev/blog/cloudflare-worker-send-email/
 add a forgot password screen
 join all the js file into one (or leave to cloudflare / ci)
-clean up the button rendering
-add the email worker somewhere where i can find it as i cannot find the source add to a worker in thos worker folder
+in table lookup allow it use a database
+work out how to add joins maybe move it all to prisma to standarise things

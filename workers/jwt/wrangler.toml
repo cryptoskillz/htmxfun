@@ -7,15 +7,17 @@ compatibility_flags = ["nodejs_compat"]
 
 
 [env.production]
-vars = {SECRET_KEY = "ASFSDFJDSJFJDSKFSDKLJF1314234234"}
-
+vars = {SECRET_KEY = "ASFSDFJDSJFJDSKFSDKLJF1314234234", API_URL = "https://test3.orbitlabsworker.workers.dev/", EMAIL_API_URL="https://email.cryptoskillz.workers.dev", FORGOT_PASSWORD_EMAIL_TEMPLATE_ID="30458239", PRODUCT_NAME="HTMX Fun", SENDER_EMAIL_NAME="htmxfun",SIGNUP_EMAIL_TEMPLATE_ID="30429839"}
 [[env.production.d1_databases]]
 binding = "DB"
 database_name = "htmx"
 database_id = "b9b6406b-0c3a-4e07-aa4d-3ac5e550dd53"
 
 [env.local]
-vars = {SECRET_KEY = "ASFSDFJDSJFJDSKFSDKLJF1314234234"}
+vars = {SECRET_KEY = "ASFSDFJDSJFJDSKFSDKLJF1314234234", API_URL = "http://localhost:8787/", EMAIL_API_URL="http://localhost:8789/", FORGOT_PASSWORD_EMAIL_TEMPLATE_ID="30458239", PRODUCT_NAME="HTMX Fun", SENDER_EMAIL_NAME="htmxfun",SIGNUP_EMAIL_TEMPLATE_ID="30429839"}
+
+
+
 
 [[env.local.d1_databases]]
 binding = "DB"
