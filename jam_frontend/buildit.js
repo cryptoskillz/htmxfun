@@ -12,6 +12,22 @@ const environment = args.includes("prod") ? "production" : "local";
 // Load environment variables
 const getEnvConfig = require("./_data/env.js");
 const env = getEnvConfig(environment);
+console.log(env);
+
+const getapiData = require("./_data/api.js");
+let apiData;
+(async () => {
+  try {
+    apiData = await getapiData(); // Call getapiData asynchronously
+    console.log("API data:");
+    console.log(apiData);
+
+    // Process apiData further as needed
+  } catch (error) {
+    console.error("Error fetching API data:", error);
+  }
+})();
+
 // Console log the build type and API URL
 console.log(`Build type: ${environment}`);
 console.log(`API URL: ${env.API_URL}`);
@@ -75,6 +91,40 @@ if (fs.existsSync(assetsFolder)) {
   console.log(`Successfully copied assets folder to ${destAssetsFolder}`);
 }
 
+// Function to generate paginated content
+async function generatePaginatedContent(
+  dataArray,
+  size,
+  alias,
+  permalinkTemplate,
+  layout,
+  env
+) {
+  const totalPages = Math.ceil(dataArray.length / size);
+
+  for (let i = 0; i < totalPages; i++) {
+    const pageData = dataArray.slice(i * size, (i + 1) * size);
+
+    const pageContent = nunjucks.renderString(layout, {
+      ...env,
+      [alias]: pageData,
+    });
+
+    for (let j = 0; j < pageData.length; j++) {
+      const permalink = nunjucks.renderString(permalinkTemplate, {
+        [alias]: pageData[j],
+      });
+
+      const outputPath = path.join(destBaseFolder, permalink, "index.html");
+      const outputFolder = path.dirname(outputPath);
+
+      await fs.promises.mkdir(outputFolder, { recursive: true });
+      await fs.promises.writeFile(outputPath, pageContent, "utf8");
+      console.log(`Successfully created ${outputPath}`);
+    }
+  }
+}
+
 // Read the files in the source folder
 fs.readdir(sourceFolder, async (err, files) => {
   if (err) {
@@ -114,35 +164,53 @@ fs.readdir(sourceFolder, async (err, files) => {
           });
         }
 
-        // Handle multiple output folders
-        const outputFolders = frontMatter.outputFolder
-          ? frontMatter.outputFolder.split(",").map((folder) => folder.trim())
-          : [];
-        for (const folder of outputFolders) {
-          const newFolderPath = path.join(destBaseFolder, folder);
-          const newFilePath = path.join(newFolderPath, "index.html");
+        // Check for pagination
+        if (frontMatter.pagination) {
+          const paginationData = eval(frontMatter.pagination.data); // Ensure this is safe or pre-process it
+          const size = frontMatter.pagination.size || 1;
+          const alias = frontMatter.pagination.alias || "contentarray";
+          const permalinkTemplate =
+            frontMatter.permalink || "/guides/{{ contentarray.slug }}/";
 
-          await fs.promises.mkdir(newFolderPath, { recursive: true });
-          await fs.promises.writeFile(newFilePath, finalContent, "utf8");
-          console.log(`Successfully created ${newFilePath}`);
-        }
-
-        // Handle the default output path if no specific folders are defined
-        if (outputFolders.length === 0) {
-          const fileNameWithoutExt = path.basename(file, ".njk");
-          if (fileNameWithoutExt === "index") {
-            // Render as index.html directly in the root
-            const newFilePath = path.join(destBaseFolder, "index.html");
-            await fs.promises.writeFile(newFilePath, finalContent, "utf8");
-            console.log(`Successfully created ${newFilePath}`);
-          } else {
-            // Render in a folder named after the file
-            const newFolderPath = path.join(destBaseFolder, fileNameWithoutExt);
+          await generatePaginatedContent(
+            paginationData,
+            size,
+            alias,
+            permalinkTemplate,
+            finalContent,
+            env
+          );
+        } else {
+          // Handle the default output path if no specific paths are defined
+          const outputPaths = frontMatter.outputPaths || [];
+          for (const outputPath of outputPaths) {
+            const newFolderPath = path.join(destBaseFolder, outputPath);
             const newFilePath = path.join(newFolderPath, "index.html");
 
             await fs.promises.mkdir(newFolderPath, { recursive: true });
             await fs.promises.writeFile(newFilePath, finalContent, "utf8");
             console.log(`Successfully created ${newFilePath}`);
+          }
+
+          if (outputPaths.length === 0) {
+            const fileNameWithoutExt = path.basename(file, ".njk");
+            if (fileNameWithoutExt === "index") {
+              // Render as index.html directly in the root
+              const newFilePath = path.join(destBaseFolder, "index.html");
+              await fs.promises.writeFile(newFilePath, finalContent, "utf8");
+              console.log(`Successfully created ${newFilePath}`);
+            } else {
+              // Render in a folder named after the file
+              const newFolderPath = path.join(
+                destBaseFolder,
+                fileNameWithoutExt
+              );
+              const newFilePath = path.join(newFolderPath, "index.html");
+
+              await fs.promises.mkdir(newFolderPath, { recursive: true });
+              await fs.promises.writeFile(newFilePath, finalContent, "utf8");
+              console.log(`Successfully created ${newFilePath}`);
+            }
           }
         }
       } catch (err) {
