@@ -111,39 +111,39 @@ export default {
 					let verifyCode = uuid.v4();
 					query = `INSERT INTO user (email,password,apiSecret,confirmed,isBlocked,isAdmin,verifyCode) VALUES ('${body.email}','${body.password}','${apiSecret}',0, 0,0,'${verifyCode}')`;
 					data = await executeQuery(env.DB, query, false, false);
+					data.success = true;
 					if (data.success == true) {
 						//send the email
 						/*
 						note we use postmark which can be found here 
 						postmarkapp.com/
-
 						*/
 
 						const data = {
-							templateId: env.SIGNUPEMAILTEMPLATEID,
+							templateId: env.SIGNUP_EMAIL_TEMPLATE_ID,
 							to: body.email,
 							templateVariables: {
 								name: ``,
-								product_name: `${env.PRODUCTNAME}`,
-								action_url: `${env.ADMINURL}verify?verifycode=${verifyCode}`,
-								login_url: `${env.ADMINURL}account-login`,
+								product_name: `${env.PRODUC_TNAME}`,
+								action_url: `${env.API_URL}verify?verifycode=${verifyCode}`,
+								login_url: `${env.API_URL}account-login`,
 								username: ``,
-								sender_name: `${env.SENDEREMAILNAME}`,
+								sender_name: `${env.SENDER_EMAIL_NAME}`,
 							},
 						};
 
 						//call the cloudflare API for a one time URL
-						const responseEmail = await fetch(env.EMAILAPIURL, {
+						const responseEmail = await fetch(env.EMAIL_API_URL, {
 							method: 'POST',
 							headers: {
 								'Content-Type': 'application/json',
 							},
 							body: JSON.stringify(data),
 						});
-						console.log(responseEmail);
+						//xconsole.log(responseEmail);
 						//get the repsonse
 						const emailResponse = await responseEmail.json();
-						console.log(emailResponse);
+						//xconsole.log(emailResponse);
 
 						responseObj = {
 							message: `Signup successfull`,

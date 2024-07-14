@@ -1,23 +1,17 @@
 /**
-
-
-TODO
-
-
-
+email worker
  */
-
 export default {
 	async fetch(request, env) {
-		console.log(env);
+		//handle the post
 		if (request.method == 'POST') {
 			let method = '';
 			const theData = await request.json();
 			const data = {
-				From: `${env.EMAILFROM}`,
+				From: `${env.EMAIL_FROM}`,
 				To: `${theData.to}`,
 			};
-			console.log(data);
+			//build the api call
 			if (theData.templateId != void 0) {
 				method = 'email/withTemplate';
 				data.TemplateId = theData.templateId;
@@ -28,18 +22,20 @@ export default {
 				if (theData.textBody != void 0) data.TextBody = theData.textBody;
 				if (theData.htmlBody != void 0) data.HextBody = theData.htmlBody;
 			}
-			console.log(env.EMAILAPI + method);
+			//build the api call
 			const options = {
 				method: 'POST',
 				headers: {
 					Accept: 'application/json',
 					'Content-Type': 'application/json',
-					'X-Postmark-Server-Token': env.EMAILTOKEN,
+					'X-Postmark-Server-Token': env.EMAIL_TOKEN,
 				},
 				body: JSON.stringify(data),
 			};
-			const response = await fetch(env.EMAILAPI + method, options);
-			console.log(response);
+			//call the api
+			const response = await fetch(env.EMAIL_API + method, options);
+			//console.log(response);
+			//handle the response
 			if (response.ok) {
 				return new Response(JSON.stringify({ message: 'Email sent!' }, 200));
 			} else {
