@@ -25,12 +25,24 @@ deploy_workers() {
     cd ../..
 }
 
+deploy_database() {
+    local db=$2
+    echo "deploying $db database to database worker"
+    cd workers/database/
+    npx wrangler d1 execute htmx --$db --file=../schema.sql
+    cd ../
+    echo "deploying $db database to jwt worker"
+    cd jwt/
+    npx wrangler d1 execute htmx --$db --file=../schema.sql
+}
+
 sync_databases() {
     #todo
     echo "Syncing databases"
     cp -R workers/jwt/.wrangler/state/v3/d1/miniflare-D1DatabaseObject/ workers/database/.wrangler/state/v3/d1/miniflare-D1DatabaseObject/
 
 }
+
 
 
 # Start wrangler dev 
@@ -54,10 +66,14 @@ elif [ "$1" == "start" ]; then
     start_wrangler "workers/jwt" 8787
     start_wrangler "workers/database" 8788  # Example: different port for database
     start_wrangler "workers/email" 8789    # Example: different port for email
+elif [ "$1" == "database" ]; then
+    # Start workers
+    deploy_database "workers/jwt" $2
+   
 elif [ "$1" == "deploy" ]; then
     deploy_workers
 else
-    echo "Usage: $0 [kill|sync|start|deploy]"
+    echo "Usage: $0 [kill|sync|start|deploy|database prod/local]"
     exit 1
 fi
 echo "done"
