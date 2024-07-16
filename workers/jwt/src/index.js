@@ -22,6 +22,19 @@ export default {
 		}
 
 		/**
+		 * Retrieves the value of a URL parameter from the query string of a given URL.
+		 *
+		 * @param {URL} url - The URL object containing the query string.
+		 * @param {string} name - The name of the parameter to retrieve.
+		 * @return {string|null} The value of the parameter if found, or null if not found.
+		 */
+		function getUrlParameter(url, name) {
+			// Function to extract URL parameter from query string
+			const searchParams = new URLSearchParams(url.search);
+			return searchParams.get(name);
+		}
+
+		/**
 		 * Parses the request body based on the content type.
 		 *
 		 * @param {Request} request - The request object.
@@ -96,25 +109,30 @@ export default {
 		 * @return {Promise} A response object indicating the success or failure of the signup process.
 		 */
 		async function processSignup(body) {
+			//set a response object
 			let responseObj;
+			//set the response code
 			let code = 200;
+			//set a response message
+			let responseMessage = '';
 			//build the query
 			query = `SELECT COUNT(*) as total FROM user WHERE email = '${body.email}'`;
 			data = await executeQuery(env.DB, query, true);
+			//check if the user exists
 			if (data.total != 0) {
-				responseObj = {
-					message: `User already exists`,
-					workerAction: body.workerAction,
-					statusText: 'OK',
-				};
+				//user already exists
+				responseMessage = `User already exists`;
+				//set the code
 				code = 401;
 			} else {
+				//create the user
 				let apiSecret = uuid.v4();
 				let verifyCode = uuid.v4();
 				query = `INSERT INTO user (email,password,apiSecret,confirmed,isBlocked,isAdmin,verifyCode) VALUES ('${body.email}','${body.password}','${apiSecret}',0, 0,0,'${verifyCode}')`;
 				data = await executeQuery(env.DB, query, false, false);
 				//debug ghost out the line and enable the enable
 				//data.success = true;
+				//check if the user was created
 				if (data.success == true) {
 					//send the email
 					/*
@@ -123,7 +141,7 @@ export default {
 					
 						move this send email function 
 					*/
-
+					//send the signup email
 					const data = {
 						templateId: env.SIGNUP_EMAIL_TEMPLATE_ID,
 						to: body.email,
@@ -145,67 +163,139 @@ export default {
 						},
 						body: JSON.stringify(data),
 					});
-					//console.log(responseEmail);
-					//get the repsonse
-					const emailResponse = await responseEmail.json();
-					//console.log(emailResponse);
 
-					responseObj = {
-						message: `Signup successfull`,
-						workerAction: body.workerAction,
-						statusText: 'OK',
-					};
+					const jsonEmail = await responseEmail.json();
+					responseMessage = `Signup successfull`;
 				} else {
-					responseObj = {
-						message: `Signup not successfull`,
-						workerAction: body.workerAction,
-						statusText: 'OK',
-					};
+					responseMessage = `Signup not successfull`;
 				}
 			}
+			//send the response
+			responseObj = {
+				message: `${responseMessage}`,
+				workerAction: body.workerAction,
+				statusText: 'OK',
+			};
 			return sendResponse(responseObj, code, 'application/json');
 		}
 
-		let data;
-		let query;
-		let responseObj;
+		/**
+		 * A function that processes user login.
+		 *
+		 * @param {Object} body - The body containing user login information.
+		 * @return {Response} A response object indicating the success or failure of the login process.
+		 */
+		async function processLogin(body) {
+			let token;
+			//set a response object
+			let responseObj;
+			//set the response code
+			let code = 200;
+			//set a response message
+			let responseMessage = '';
+			//prepare the query
+			const theQuery = `SELECT user.isDeleted,user.isBlocked,user.name,user.username,user.email,user.phone,user.id,user.isAdmin,user.apiSecret from user LEFT JOIN userAccess ON user.id = userAccess.userId where user.email = '${body.email}' and user.password = '${body.password}'`;
+			//execute the query
+			const stmt = env.DB.prepare(theQuery);
+			//get the data
+			const theData = await stmt.first();
+			//get the token
+			if (theData != null) {
+				token = await jwt.sign(
+					{ data: theData },
+					env.SECRET_KEY // Secret key from environment variables
+				);
+				//return the token
+				responseMessage = 'Login successful';
+			} else {
+				responseMessage = `wrong email or password`;
+				code = 401;
+			}
+			//send the response
+			responseObj = {
+				message: `${responseMessage}`,
+				workerAction: body.workerAction,
+				statusText: 'OK',
+			};
+			return sendResponse(responseObj, code, 'application/json');
+		}
+
+		async function processVerify(body, requestUrl) {
+			const url = new URL(requestUrl);
+			//set a response object
+			let responseObj;
+			//set the response code
+			let code = 200;
+			//set a response message
+			let responseMessage = '';
+			//set the content type
+			let contentType = 'text/html';
+			//prepare the query
+			const theQuery = `UPDATE user SET isVerified = 1 WHERE verifyCode = '${getUrlParameter(
+				url,
+				'verifyCode'
+			)}' and email = '${getUrlParameter(url, 'email')}'`;
+
+			console.log(theQuery);
+			//execute the query
+			const stmt = env.DB.prepare(theQuery);
+			//get the data
+
+			const result = await stmt.run(); // Assuming `run` returns an object with `changes` property
+			if (result.meta.changes > 0) responseMessage = `Verify successful`;
+			else responseMessage = `wrong verify code`;
+
+			//send the response
+			responseObj = {
+				message: `${responseMessage}`,
+				workerAction: body.workerAction,
+				statusText: 'OK',
+			};
+			return sendResponse(responseMessage, code, contentType);
+		}
+
+		async function processForgotPassword(body) {
+			//set a response object
+			let responseObj;
+			//set the response code
+			let code = 200;
+			//set a response message
+			let responseMessage = '';
+			//set the content type
+			let contentType = 'text/html';
+			//prepare the query
+			const theQuery = `SELECT name from user LEFT JOIN userAccess ON where email = '${body.email}'`;
+
+			const stmt = env.DB.prepare(theQuery);
+			//execute the query
+			//get the data
+			const theData = await stmt.first(); //execute the query
+			//get the token
+			if (theData != null) {
+				responseMessage = `Password reset sent to your email`;
+				//todo send email, update user account to isVerifed = 0
+			} else responseMessage = `wrong email address`;
+			//send the response
+			return sendResponse(responseObj, code, contentType);
+		}
+
 		// Handle POST request
 		if (request.method === 'POST') {
+			// Parse the request body
 			const body = await parseRequestBody(request);
-			if (body.workerAction == 'doSignup') {
-				return processSignup(body);
-				//return sendResponse(responseObj, 200, 'application/json');
-			}
-
-			if (body.workerAction == 'doLogin') {
-				//prepare the query
-				const theQuery = `SELECT user.isDeleted,user.isBlocked,user.name,user.username,user.email,user.phone,user.id,user.isAdmin,user.apiSecret from user LEFT JOIN userAccess ON user.id = userAccess.userId where user.email = '${body.email}' and user.password = '${body.password}'`;
-				//execute the query
-				const stmt = env.DB.prepare(theQuery);
-				//get the data
-				const theData = await stmt.first();
-				//get the token
-				if (theData != null) {
-					const token = await jwt.sign(
-						{ data: theData },
-						env.SECRET_KEY // Secret key from environment variables
-					);
-					//return the token
-					const responseObj = {
-						message: `Login successfull`,
-						token: token,
-						workerAction: body.workerAction,
-						statusText: 'OK',
-					};
-					return sendResponse(responseObj, 200, 'application/json');
-				} else {
-					const responseObj = {
-						message: `wrong email or password`,
-						workerAction: body.workerAction,
-						statusText: 'OK',
-					};
-					return sendResponse(responseObj, 401);
-				}
+			// Check the worker action
+			const workerAction = body.workerAction;
+			switch (workerAction) {
+				case 'doSignup':
+					return processSignup(body);
+				case 'doVerify':
+					return processVerify(body, request.headers.get('HX-Current-URL'));
+				case 'doForgotPassword':
+					return processForgotPassword(body);
+				case 'doLogin':
+					return processLogin(body);
+				default:
+					throw new Error(`Invalid worker action: ${workerAction}`);
 			}
 		} else {
 			// Handle other methods (PUT, DELETE, etc.)

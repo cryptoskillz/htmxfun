@@ -1,0 +1,16 @@
+---
+outputFolder: forgotpassword
+layout: layout_external
+title: "forgot password"
+---
+
+<div
+  class="pure-g"
+  id="verifyDiv"
+  name="verifyDiv"
+  hx-post="{{ API_JWT_URL }}"
+  hx-trigger="load"
+  hx-vals='{"workerAction": "doForgotPassword"}'
+>
+  Verifying your account
+</div>

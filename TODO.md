@@ -6,6 +6,14 @@ join all the js file into one (or leave to cloudflare / ci)
 in table lookup allow it use a database
 work out how to add joins maybe move it all to prisma to standarise things
 
+jwt worker tasks
+
+user execute query for all JWT functions
+verify send email, update user account to isVerifed = 0
+recode dochangepasssord
+recode doforgotpassword
+recode the sendemail funciton
+
 render field
 
 add minslength and maxlength back
