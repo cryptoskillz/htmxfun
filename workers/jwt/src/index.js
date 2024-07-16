@@ -89,6 +89,83 @@ export default {
 			});
 		}
 
+		/**
+		 * A function that processes a user signup.
+		 *
+		 * @param {Object} body - The body containing user signup information.
+		 * @return {Promise} A response object indicating the success or failure of the signup process.
+		 */
+		async function processSignup(body) {
+			let responseObj;
+			let code = 200;
+			//build the query
+			query = `SELECT COUNT(*) as total FROM user WHERE email = '${body.email}'`;
+			data = await executeQuery(env.DB, query, true);
+			if (data.total != 0) {
+				responseObj = {
+					message: `User already exists`,
+					workerAction: body.workerAction,
+					statusText: 'OK',
+				};
+				code = 401;
+			} else {
+				let apiSecret = uuid.v4();
+				let verifyCode = uuid.v4();
+				query = `INSERT INTO user (email,password,apiSecret,confirmed,isBlocked,isAdmin,verifyCode) VALUES ('${body.email}','${body.password}','${apiSecret}',0, 0,0,'${verifyCode}')`;
+				data = await executeQuery(env.DB, query, false, false);
+				//debug ghost out the line and enable the enable
+				//data.success = true;
+				if (data.success == true) {
+					//send the email
+					/*
+						note we use postmark which can be found here 
+						postmarkapp.com/
+					
+						move this send email function 
+					*/
+
+					const data = {
+						templateId: env.SIGNUP_EMAIL_TEMPLATE_ID,
+						to: body.email,
+						templateVariables: {
+							name: `${body.email.split('@')[0]}`,
+							product_name: `${env.PRODUC_TNAME}`,
+							action_url: `${env.API_URL}verify?verifycode=${verifyCode}`,
+							login_url: `${env.API_URL}account-login`,
+							username: ``,
+							sender_name: `${env.SENDER_EMAIL_NAME}`,
+						},
+					};
+
+					//call the cloudflare API for a one time URL
+					const responseEmail = await fetch(env.EMAIL_API_URL, {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json',
+						},
+						body: JSON.stringify(data),
+					});
+					//console.log(responseEmail);
+					//get the repsonse
+					const emailResponse = await responseEmail.json();
+					//console.log(emailResponse);
+
+					responseObj = {
+						message: `Signup successfull`,
+						workerAction: body.workerAction,
+						statusText: 'OK',
+					};
+				} else {
+					responseObj = {
+						message: `Signup not successfull`,
+						workerAction: body.workerAction,
+						statusText: 'OK',
+					};
+				}
+			}
+			return sendResponse(responseObj, code, 'application/json');
+		}
+
 		let data;
 		let query;
 		let responseObj;
@@ -96,71 +173,10 @@ export default {
 		if (request.method === 'POST') {
 			const body = await parseRequestBody(request);
 			if (body.workerAction == 'doSignup') {
-				//build the query
-				query = `SELECT COUNT(*) as total FROM user WHERE email = '${body.email}'`;
-				data = await executeQuery(env.DB, query, true);
-				if (data.total != 0) {
-					responseObj = {
-						message: `User already exists`,
-						workerAction: body.workerAction,
-						statusText: 'OK',
-					};
-					return sendResponse(responseObj, 401, 'application/json');
-				} else {
-					let apiSecret = uuid.v4();
-					let verifyCode = uuid.v4();
-					query = `INSERT INTO user (email,password,apiSecret,confirmed,isBlocked,isAdmin,verifyCode) VALUES ('${body.email}','${body.password}','${apiSecret}',0, 0,0,'${verifyCode}')`;
-					data = await executeQuery(env.DB, query, false, false);
-					//debug ghost out the line and emable the enable
-					//data.success = true;
-					if (data.success == true) {
-						//send the email
-						/*
-						note we use postmark which can be found here 
-						postmarkapp.com/
-						*/
-						console.log(body.email.split('@')[0]);
-						const data = {
-							templateId: env.SIGNUP_EMAIL_TEMPLATE_ID,
-							to: body.email,
-							templateVariables: {
-								name: `${body.email.split('@')[0]}`,
-								product_name: `${env.PRODUC_TNAME}`,
-								action_url: `${env.API_URL}verify?verifycode=${verifyCode}`,
-								login_url: `${env.API_URL}account-login`,
-								username: ``,
-								sender_name: `${env.SENDER_EMAIL_NAME}`,
-							},
-						};
-
-						//call the cloudflare API for a one time URL
-						const responseEmail = await fetch(env.EMAIL_API_URL, {
-							method: 'POST',
-							headers: {
-								'Content-Type': 'application/json',
-							},
-							body: JSON.stringify(data),
-						});
-						//xconsole.log(responseEmail);
-						//get the repsonse
-						const emailResponse = await responseEmail.json();
-						//xconsole.log(emailResponse);
-
-						responseObj = {
-							message: `Signup successfull`,
-							workerAction: body.workerAction,
-							statusText: 'OK',
-						};
-					} else {
-						responseObj = {
-							message: `Signup not successfull`,
-							workerAction: body.workerAction,
-							statusText: 'OK',
-						};
-					}
-					return sendResponse(responseObj, 200, 'application/json');
-				}
+				return processSignup(body);
+				//return sendResponse(responseObj, 200, 'application/json');
 			}
+
 			if (body.workerAction == 'doLogin') {
 				//prepare the query
 				const theQuery = `SELECT user.isDeleted,user.isBlocked,user.name,user.username,user.email,user.phone,user.id,user.isAdmin,user.apiSecret from user LEFT JOIN userAccess ON user.id = userAccess.userId where user.email = '${body.email}' and user.password = '${body.password}'`;

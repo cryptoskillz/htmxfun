@@ -27,3 +27,4 @@ vars = {API_URL = "http://localhost:8787/",SECRET_KEY = "ASFSDFJDSJFJDSKFSDKLJF1
 binding = "DB"
 database_name = "htmx"
 database_id = "b9b6406b-0c3a-4e07-aa4d-3ac5e550dd53"
+

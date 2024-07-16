@@ -37,7 +37,6 @@ deploy_database() {
 }
 
 sync_databases() {
-    #todo
     echo "Syncing databases"
     cp -R workers/jwt/.wrangler/state/v3/d1/miniflare-D1DatabaseObject/ workers/database/.wrangler/state/v3/d1/miniflare-D1DatabaseObject/
 
