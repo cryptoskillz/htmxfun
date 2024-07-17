@@ -7,25 +7,29 @@ title: "forgot password"
 <div>
   <form
     hx-post="{{ API_JWT_URL }}"
-    hx-vals='{"workerAction": "doForgotPassword"}'
+    hx-vals='{"workerAction": "doChangePassword"}'
     hx-target="#responseText"
     hx-swap="innerHTML"
     class="pure-form pure-form-stacked"
   >
-    <label for="email"> Email </label>
+    <label for="password"> New Password </label>
     <input
-      type="email"
-      name="email"
-      placeholder="enter email"
-      id="email"
+      type="password"
+      name="password"
+      placeholder="enter password"
+      id="password"
+      pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}"
+      title="Must contain at least one number and one uppercase and lowercase letter, and at least 8 or more characters"
       required
     />
-    <label for="email2"> Comfirm Email </label>
+    <label for="password2"> Confirm Password </label>
     <input
-      type="email2"
-      name="email2"
-      placeholder="enter email"
-      id="email2"
+      type="password"
+      name="password2"
+      placeholder="enter password"
+      id="password2"
+      pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}"
+      title="Must contain at least one number and one uppercase and lowercase letter, and at least 8 or more characters"
       required
     />
     <button class="pure-button" type="submit">Submit</button>

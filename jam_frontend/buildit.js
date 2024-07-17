@@ -95,12 +95,12 @@ async function generateContent(
   permalinkTemplate,
   layout,
   env,
-  outputFolders
+  outputFolders,
+  isIndexFile
 ) {
   if (dataArray && dataArray.length > 0) {
     // Paginated content generation
     const totalPages = Math.ceil(dataArray.length / size);
-    console.log(totalPages);
     for (let i = 0; i < totalPages; i++) {
       const pageData = dataArray.slice(i * size, (i + 1) * size);
 
@@ -132,12 +132,17 @@ async function generateContent(
   } else {
     // Single page content generation
     for (const outputFolder of outputFolders) {
-      const outputPath = path.join(
-        destBaseFolder,
-        outputFolder,
-        permalinkTemplate,
-        "index.html"
-      );
+      let outputPath;
+      if (isIndexFile) {
+        outputPath = path.join(destBaseFolder, "index.html");
+      } else {
+        outputPath = path.join(
+          destBaseFolder,
+          outputFolder,
+          permalinkTemplate,
+          "index.html"
+        );
+      }
       const outputDir = path.dirname(outputPath);
 
       await fs.promises.mkdir(outputDir, { recursive: true });
@@ -203,7 +208,8 @@ fs.readdir(sourceFolder, async (err, files) => {
             permalinkTemplate,
             finalContent,
             env,
-            outputFolders
+            outputFolders,
+            file === "index.njk"
           );
         } else {
           // Single page handling based on front matter
@@ -218,7 +224,8 @@ fs.readdir(sourceFolder, async (err, files) => {
             frontMatter.permalink || "/",
             finalContent,
             env,
-            outputFolders
+            outputFolders,
+            file === "index.njk"
           );
         }
       } catch (err) {

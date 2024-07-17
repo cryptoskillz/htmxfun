@@ -115,6 +115,8 @@ export default {
 			let code = 200;
 			//set a response message
 			let responseMessage = '';
+			let query = '';
+			let data;
 			//build the query
 			query = `SELECT COUNT(*) as total FROM user WHERE email = '${body.email}'`;
 			data = await executeQuery(env.DB, query, true);
@@ -128,43 +130,17 @@ export default {
 				//create the user
 				let apiSecret = uuid.v4();
 				let verifyCode = uuid.v4();
-				query = `INSERT INTO user (email,password,apiSecret,confirmed,isBlocked,isAdmin,verifyCode) VALUES ('${body.email}','${body.password}','${apiSecret}',0, 0,0,'${verifyCode}')`;
+				const username = body.email.split('@')[0];
+				query = `INSERT INTO user (name,username,email,password,apiSecret,confirmed,isBlocked,isAdmin,verifyCode) VALUES ('${username}','${username}','${body.email}','${body.password}','${apiSecret}',0, 0,0,'${verifyCode}')`;
 				data = await executeQuery(env.DB, query, false, false);
+				//this is faking the email worker until we recode it
+				console.log(`${env.FRONTEND_URL}verify/?verifyCode=${verifyCode}`);
 				//debug ghost out the line and enable the enable
 				//data.success = true;
 				//check if the user was created
 				if (data.success == true) {
 					//send the email
-					/*
-						note we use postmark which can be found here 
-						postmarkapp.com/
-					
-						move this send email function 
-					*/
-					//send the signup email
-					const data = {
-						templateId: env.SIGNUP_EMAIL_TEMPLATE_ID,
-						to: body.email,
-						templateVariables: {
-							name: `${body.email.split('@')[0]}`,
-							product_name: `${env.PRODUC_TNAME}`,
-							action_url: `${env.API_URL}verify?verifycode=${verifyCode}`,
-							login_url: `${env.API_URL}account-login`,
-							username: ``,
-							sender_name: `${env.SENDER_EMAIL_NAME}`,
-						},
-					};
 
-					//call the cloudflare API for a one time URL
-					const responseEmail = await fetch(env.EMAIL_API_URL, {
-						method: 'POST',
-						headers: {
-							'Content-Type': 'application/json',
-						},
-						body: JSON.stringify(data),
-					});
-
-					const jsonEmail = await responseEmail.json();
 					responseMessage = `Signup successfull`;
 				} else {
 					responseMessage = `Signup not successfull`;
@@ -219,8 +195,6 @@ export default {
 
 		async function processVerify(requestUrl) {
 			const url = new URL(requestUrl);
-			//set a response object
-			let responseObj;
 			//set the response code
 			let code = 200;
 			//set a response message
@@ -228,10 +202,7 @@ export default {
 			//set the content type
 			let contentType = 'text/html';
 			//build query
-			const query = `UPDATE user SET isVerified = 1 WHERE verifyCode = '${getUrlParameter(
-				url,
-				'verifyCode'
-			)}' and email = '${getUrlParameter(url, 'email')}'`;
+			const query = `UPDATE user SET isVerified = 1,verifyCode = '' WHERE verifyCode = '${getUrlParameter(url, 'verifyCode')}'`;
 			const data = await executeQuery(env.DB, query, false, false);
 			if (data.meta.changes > 0) responseMessage = `Verify successful, click  here to <a href="/login">Login</a>`;
 			else responseMessage = `wrong verify code`;
@@ -239,8 +210,6 @@ export default {
 		}
 
 		async function processForgotPassword(body) {
-			//set a response object
-			let responseObj;
 			//set the response code
 			let code = 200;
 			//set a response message
@@ -249,12 +218,16 @@ export default {
 			let contentType = 'text/html';
 			//prepare the query
 			const query = `SELECT name from user where email = '${body.email}'`;
-			console.log(query);
 			//execute the query
 			const data = await executeQuery(env.DB, query, true, false);
-			console.log(data);
 			//get the token
 			if (data != null) {
+				const verifyCode = uuid.v4();
+				const query = `UPDATE user SET verifyCode = '${verifyCode}' WHERE email = '${body.email}'`;
+				const data = await executeQuery(env.DB, query, false, false);
+				//send the email
+				//this is faking the email worker until we recode it
+				console.log(`${env.FRONTEND_URL}changepassword/?verifyCode=${verifyCode}`);
 				responseMessage = `Password reset sent to your email click <a href="/">here</a>`;
 				//todo send email, update user account to isVerifed = 0
 			} else responseMessage = `wrong email address`;
@@ -262,8 +235,14 @@ export default {
 			return sendResponse(responseMessage, code, contentType);
 		}
 
-		async function changePassword(body) {
-			//todo
+		/**
+		 * Process the change password request.
+		 *
+		 * @param {Object} body - The request body containing the new password and its confirmation.
+		 * @return {Promise<Object>} A promise that resolves to an object containing the response message, response code, and content type.
+		 */
+		async function processChangePassword(body, requestUrl) {
+			const url = new URL(requestUrl);
 			//set a response object
 			let responseObj;
 			//set the response code
@@ -272,17 +251,22 @@ export default {
 			let responseMessage = '';
 			//set the content type
 			let contentType = 'text/html';
-			//prepare the query
-			const query = `SELECT name from user where email = '${body.email}'`;
-			console.log(query);
-			//execute the query
-			const data = await executeQuery(env.DB, query, true, false);
-			console.log(data);
-			//get the token
-			if (data != null) {
-				responseMessage = `Password reset sent to your email`;
-				//todo send email, update user account to isVerifed = 0
-			} else responseMessage = `wrong email address`;
+			//check passwords
+			if (body.password != body.password2) responseMessage = `passwords do not match`;
+			else {
+				//prepare the query
+				const query = `UPDATE user SET isVerified = 1, password = '${body.password}',verifyCode = '' WHERE verifyCode = '${getUrlParameter(
+					url,
+					'verifyCode'
+				)}' `;
+				//execute the query
+				const data = await executeQuery(env.DB, query, false, false);
+				//get the token
+				if (data.meta.changes > 0) {
+					responseMessage = `Password has been updated  click here to <a href="${env.FRONTEND_URL}login">login</a>`;
+					//todo send email, update user account to isVerifed = 0
+				} else responseMessage = `Password has not been updated`;
+			}
 			//send the response
 			return sendResponse(responseMessage, code, contentType);
 		}
@@ -304,7 +288,7 @@ export default {
 				case 'doLogin':
 					return processLogin(body);
 				case 'doChangePassword':
-					changePassword(body);
+					return processChangePassword(body, request.headers.get('HX-Current-URL'));
 				default:
 					throw new Error(`Invalid worker action: ${workerAction}`);
 			}
