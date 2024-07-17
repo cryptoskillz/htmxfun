@@ -18,9 +18,8 @@ upgrade email to mailchannels https://www.fadhil-blog.dev/blog/cloudflare-worker
 ## database worker tasks
 
 render field
-add minslength and maxlength back
-add the look up data to be specific to a table or not
-in table lookup allow it use a database
+make sure it works with multipile swing tables
+make swing table work with boundtotable
 
 ## jamstack
 

@@ -9,10 +9,16 @@ import jwt from '@tsndr/cloudflare-worker-jwt';
 // fields to ignore
 const blackListFields = ['id', 'authToken'];
 //look up data for selects
-const lookUpData = [
-	{ value: 'chris', name: 'chris' },
-	{ value: 'dave', name: 'dave' },
-	{ value: 'jonesy', name: 'jonesy' },
+const lookupData = [
+	{
+		fieldName: 'name',
+		boundToTable: '', // Set to specific table name if bound, otherwise false
+		swingTable: 'swingName',
+		data: [
+			{ fieldName: 'cryptoskillz', fieldValue: '1' },
+			{ fieldName: 'dave', fieldValue: '2' },
+		],
+	},
 ];
 
 //fields to use, should be using prisma really for this
@@ -24,7 +30,7 @@ const fieldsConfig = {
 	],
 	user: [
 		{ name: 'id', inputType: 'number', required: true },
-		{ name: 'name', inputType: 'text', minLength: 5, maxLength: 10, required: true },
+		{ name: 'name', inputType: 'select', minLength: 5, maxLength: 10, required: true },
 		{ name: 'email', inputType: 'email', required: true },
 		{ name: 'username', inputType: 'text' },
 	],
@@ -503,40 +509,65 @@ function renderTable(fields, data, tableName, env, workerAction) {
 }
 
 /**
- * Renders a form based on the render type, table name, fields, form data, and environment.
+ * Renders a form HTML element based on the given render type, table name, fields, form data, and environment.
  *
- * @param {string} renderType - The type of rendering ('formedit' or 'formadd').
- * @param {string} tableName - The name of the table.
- * @param {Array<Object>} fields - An array of field objects.
- * @param {Object} formData - The form data to populate the fields.
- * @param {Object} env - The environment object containing configuration settings.
- * @return {string} The HTML form content.
+ * @param {string} renderType - The type of form to render ('formedit' or 'formadd').
+ * @param {string} tableName - The name of the table the form is associated with.
+ * @param {Array} fields - An array of field objects containing information about the form fields.
+ * @param {Object} formData - The data to pre-populate the form fields with.
+ * @param {Object} env - The environment object containing the API URL.
+ * @return {Promise<string>} A promise that resolves to the HTML content of the rendered form.
  */
 async function renderForm(renderType, tableName, fields, formData, env) {
-	// Render form
 	const formFields = await Promise.all(
 		fields
-			.filter((field) => !blackListFields.includes(field.name)) // Filter out fields in blacklist
+			.filter((field) => !blackListFields.includes(field.name))
 			.map(async (field) => {
-				let lookupData = [];
-				if (field.inputType === 'select') {
-					lookupData = await getLookupData(tableName, field);
-				}
+				let lookupDataFiltered = lookupData.filter(
+					(lookup) => lookup.fieldName === field.name && (lookup.boundToTable === tableName || !lookup.boundToTable)
+				);
 
-				if (lookupData.length > 0) {
-					return renderSelectField(field, formData, lookupData);
+				if (lookupDataFiltered.length > 0) {
+					if (lookupDataFiltered[0].swingTable) {
+						// Fetch data from swingTable using SQL query only if swingTable is defined
+						const query = `SELECT fieldName, fieldValue FROM ${lookupDataFiltered[0].swingTable}`;
+						try {
+							const { success, results } = await executeQuery(env.DB, query, false, false);
+
+							if (success && Array.isArray(results)) {
+								const lookupDataF = results.map((row) => ({
+									fieldName: row.fieldName,
+									fieldValue: row.fieldValue,
+								}));
+								return renderSelectField(field, formData, lookupDataF);
+							} else {
+								console.error(`No valid results found for query: ${query}`);
+							}
+						} catch (err) {
+							console.error(`Error fetching data from swingTable ${lookupDataFiltered[0].swingTable}: ${err.message}`);
+						}
+					} else if (lookupDataFiltered[0].data && Array.isArray(lookupDataFiltered[0].data)) {
+						// Use data array directly if swingTable is not defined
+						const lookupDataF = lookupDataFiltered[0].data.map((item) => ({
+							fieldName: item.fieldName,
+							fieldValue: item.fieldValue,
+						}));
+						return renderSelectField(field, formData, lookupDataF);
+					}
 				}
+				// Fallback to text input field if select fails or no suitable data found
 				return renderInputField(field, formData, renderType);
 			})
 	);
 
+	// Construct form HTML based on renderType, tableName, etc.
 	const formAction = renderType === 'formedit' ? 'hx-put' : 'hx-post';
 	const formUrl = renderType === 'formedit' ? `${env.API_URL}${tableName}/${formData.id}` : `${env.API_URL}${tableName}/`;
 	return `
         <form class="pure-form pure-form-stacked" ${formAction}="${formUrl}" hx-target="#responseText" hx-swap="innerHTML">
             ${formFields.join('')}
             <button type="submit" class="pure-button pure-button-primary">${renderType === 'formedit' ? 'Update' : 'Add'}</button>
-			<a href="javascript:history.back()"  class="pure-button pure-button-primary">Cancel</a>
+            <a href="javascript:history.back()" class="pure-button pure-button-primary">Cancel</a>
         </form>
     `;
 }
@@ -550,13 +581,16 @@ async function renderForm(renderType, tableName, fields, formData, env) {
  * @return {string} The HTML string representing the input field.
  */
 function renderInputField(field, formData, renderType) {
+	if (field.inputType == 'select') field.inputType = 'text';
 	// Render input field
 	const value = formData[field.name] || '';
 	const disableAttr = (field.disableAdd && renderType === 'formadd') || (field.disableEdit && renderType === 'formedit') ? 'disabled' : '';
 	const requiredAttr = field.required ? 'required' : '';
+	const minLength = field.minLength ? `minlength="${field.minLength}"` : '';
+	const maxLength = field.maxLength ? `maxlength="${field.maxLength}"` : '';
 	return `
         <label for="${field.name}">${field.name}</label>
-        <input type="${field.inputType}" id="${field.name}" name="${field.name}" value="${value}" ${disableAttr} ${requiredAttr} />
+        <input type="${field.inputType}" id="${field.name}" name="${field.name}" value="${value}" ${disableAttr} ${requiredAttr} ${minLength} ${maxLength}/>
     `;
 }
 
@@ -564,27 +598,24 @@ function renderInputField(field, formData, renderType) {
  * Renders a select field HTML element based on the given field, form data, and lookup data.
  *
  * @param {Object} field - The field object containing information about the select field.
- * @param {Object} formData - The form data object containing the values for the select field.
- * @param {Array} lookupData - The array of data used for populating the select options.
- * @return {string} The HTML string representing the select field.
+ * @param {Object} formData - The form data object containing the values for the select fields.
+ * @param {Array} lookupData - The lookup data array containing options for the select field.
+ * @return {string} The HTML select field content.
  */
 function renderSelectField(field, formData, lookupData) {
-	// Generate options based on lookup data
+	const fieldValue = formData[field.name] || '';
 	const options = lookupData
-		.map((option) => {
-			const selectedAttr = option.value === formData[field.name] ? 'selected' : '';
-			return `<option value="${option.value}" ${selectedAttr}>${option.name}</option>`;
-		})
+		.map(
+			(option) => `<option value="${option.fieldValue}" ${option.fieldValue === fieldValue ? 'selected' : ''}>${option.fieldName}</option>`
+		)
 		.join('');
-	const requiredAttr = field.required ? 'required' : '';
 	return `
         <label for="${field.name}">${field.name}</label>
-        <select id="${field.name}" name="${field.name}" ${requiredAttr}>
+        <select id="${field.name}" name="${field.name}" class="pure-input-1">
             ${options}
         </select>
     `;
 }
-
 /**
  * Executes a SQL query using the provided database connection and returns the result.
  *
