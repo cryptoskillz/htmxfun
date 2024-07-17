@@ -193,16 +193,13 @@ export default {
 			let code = 200;
 			//set a response message
 			let responseMessage = '';
-			//prepare the query
-			const theQuery = `SELECT user.isDeleted,user.isBlocked,user.name,user.username,user.email,user.phone,user.id,user.isAdmin,user.apiSecret from user LEFT JOIN userAccess ON user.id = userAccess.userId where user.email = '${body.email}' and user.password = '${body.password}'`;
-			//execute the query
-			const stmt = env.DB.prepare(theQuery);
-			//get the data
-			const theData = await stmt.first();
-			//get the token
-			if (theData != null) {
+			const query = `SELECT user.isDeleted,user.isBlocked,user.name,user.username,user.email,user.phone,user.id,user.isAdmin,user.apiSecret from user LEFT JOIN userAccess ON user.id = userAccess.userId where user.email = '${body.email}' and user.password = '${body.password}'`;
+			const data = await executeQuery(env.DB, query, true, false);
+			//check if the user exists
+			if (data != null) {
+				//get the token
 				token = await jwt.sign(
-					{ data: theData },
+					{ data: data },
 					env.SECRET_KEY // Secret key from environment variables
 				);
 				//return the token
@@ -220,7 +217,7 @@ export default {
 			return sendResponse(responseObj, code, 'application/json');
 		}
 
-		async function processVerify(body, requestUrl) {
+		async function processVerify(requestUrl) {
 			const url = new URL(requestUrl);
 			//set a response object
 			let responseObj;
@@ -230,27 +227,14 @@ export default {
 			let responseMessage = '';
 			//set the content type
 			let contentType = 'text/html';
-			//prepare the query
-			const theQuery = `UPDATE user SET isVerified = 1 WHERE verifyCode = '${getUrlParameter(
+			//build query
+			const query = `UPDATE user SET isVerified = 1 WHERE verifyCode = '${getUrlParameter(
 				url,
 				'verifyCode'
 			)}' and email = '${getUrlParameter(url, 'email')}'`;
-
-			console.log(theQuery);
-			//execute the query
-			const stmt = env.DB.prepare(theQuery);
-			//get the data
-
-			const result = await stmt.run(); // Assuming `run` returns an object with `changes` property
-			if (result.meta.changes > 0) responseMessage = `Verify successful`;
+			const data = await executeQuery(env.DB, query, false, false);
+			if (data.meta.changes > 0) responseMessage = `Verify successful, click  here to <a href="/login">Login</a>`;
 			else responseMessage = `wrong verify code`;
-
-			//send the response
-			responseObj = {
-				message: `${responseMessage}`,
-				workerAction: body.workerAction,
-				statusText: 'OK',
-			};
 			return sendResponse(responseMessage, code, contentType);
 		}
 
@@ -264,19 +248,43 @@ export default {
 			//set the content type
 			let contentType = 'text/html';
 			//prepare the query
-			const theQuery = `SELECT name from user LEFT JOIN userAccess ON where email = '${body.email}'`;
-
-			const stmt = env.DB.prepare(theQuery);
+			const query = `SELECT name from user where email = '${body.email}'`;
+			console.log(query);
 			//execute the query
-			//get the data
-			const theData = await stmt.first(); //execute the query
+			const data = await executeQuery(env.DB, query, true, false);
+			console.log(data);
 			//get the token
-			if (theData != null) {
+			if (data != null) {
+				responseMessage = `Password reset sent to your email click <a href="/">here</a>`;
+				//todo send email, update user account to isVerifed = 0
+			} else responseMessage = `wrong email address`;
+			//send the response
+			return sendResponse(responseMessage, code, contentType);
+		}
+
+		async function changePassword(body) {
+			//todo
+			//set a response object
+			let responseObj;
+			//set the response code
+			let code = 200;
+			//set a response message
+			let responseMessage = '';
+			//set the content type
+			let contentType = 'text/html';
+			//prepare the query
+			const query = `SELECT name from user where email = '${body.email}'`;
+			console.log(query);
+			//execute the query
+			const data = await executeQuery(env.DB, query, true, false);
+			console.log(data);
+			//get the token
+			if (data != null) {
 				responseMessage = `Password reset sent to your email`;
 				//todo send email, update user account to isVerifed = 0
 			} else responseMessage = `wrong email address`;
 			//send the response
-			return sendResponse(responseObj, code, contentType);
+			return sendResponse(responseMessage, code, contentType);
 		}
 
 		// Handle POST request
@@ -285,15 +293,18 @@ export default {
 			const body = await parseRequestBody(request);
 			// Check the worker action
 			const workerAction = body.workerAction;
+			//should these be under JWT?
 			switch (workerAction) {
 				case 'doSignup':
 					return processSignup(body);
 				case 'doVerify':
-					return processVerify(body, request.headers.get('HX-Current-URL'));
+					return processVerify(request.headers.get('HX-Current-URL'));
 				case 'doForgotPassword':
 					return processForgotPassword(body);
 				case 'doLogin':
 					return processLogin(body);
+				case 'doChangePassword':
+					changePassword(body);
 				default:
 					throw new Error(`Invalid worker action: ${workerAction}`);
 			}

@@ -8,11 +8,11 @@ work out how to add joins maybe move it all to prisma to standarise things
 
 jwt worker tasks
 
-user execute query for all JWT functions
-verify send email, update user account to isVerifed = 0
 recode dochangepasssord
-recode doforgotpassword
 recode the sendemail funciton
+verify send email, update user account to isVerifed = 0
+
+fix index in buildit.js
 
 render field
 
