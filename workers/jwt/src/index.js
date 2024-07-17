@@ -127,24 +127,23 @@ export default {
 				//set the code
 				code = 401;
 			} else {
-				//create the user
+				//get a secret
 				let apiSecret = uuid.v4();
+				//get a verify code
 				let verifyCode = uuid.v4();
+				//get the name from the email
 				const username = body.email.split('@')[0];
+				//create the user
 				query = `INSERT INTO user (name,username,email,password,apiSecret,confirmed,isBlocked,isAdmin,verifyCode) VALUES ('${username}','${username}','${body.email}','${body.password}','${apiSecret}',0, 0,0,'${verifyCode}')`;
 				data = await executeQuery(env.DB, query, false, false);
-				//this is faking the email worker until we recode it
-				console.log(`${env.FRONTEND_URL}verify/?verifyCode=${verifyCode}`);
 				//debug ghost out the line and enable the enable
 				//data.success = true;
 				//check if the user was created
 				if (data.success == true) {
-					//send the email
-
-					responseMessage = `Signup successfull`;
-				} else {
-					responseMessage = `Signup not successfull`;
-				}
+					//this is faking the email worker until we recode it
+					console.log(`${env.FRONTEND_URL}verify/?verifyCode=${verifyCode}`);
+					responseMessage = `Signup successful`;
+				} else responseMessage = `Signup not successful`;
 			}
 			//send the response
 			responseObj = {
@@ -162,6 +161,7 @@ export default {
 		 * @return {Response} A response object indicating the success or failure of the login process.
 		 */
 		async function processLogin(body) {
+			//set a token var
 			let token;
 			//set a response object
 			let responseObj;
@@ -169,6 +169,7 @@ export default {
 			let code = 200;
 			//set a response message
 			let responseMessage = '';
+			//build the query
 			const query = `SELECT user.isDeleted,user.isBlocked,user.name,user.username,user.email,user.phone,user.id,user.isAdmin,user.apiSecret from user LEFT JOIN userAccess ON user.id = userAccess.userId where user.email = '${body.email}' and user.password = '${body.password}'`;
 			const data = await executeQuery(env.DB, query, true, false);
 			//check if the user exists
