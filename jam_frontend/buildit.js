@@ -19,10 +19,6 @@ let apiData;
 (async () => {
   try {
     apiData = await getapiData(); // Call getapiData asynchronously
-    console.log("API data:");
-    console.log(apiData);
-
-    // Process apiData further as needed
   } catch (error) {
     console.error("Error fetching API data:", error);
   }
@@ -91,35 +87,66 @@ if (fs.existsSync(assetsFolder)) {
   console.log(`Successfully copied assets folder to ${destAssetsFolder}`);
 }
 
-// Function to generate paginated content
-async function generatePaginatedContent(
+// Function to generate paginated content or single page content
+async function generateContent(
   dataArray,
   size,
   alias,
   permalinkTemplate,
   layout,
-  env
+  env,
+  outputFolders,
+  isIndexFile
 ) {
-  const totalPages = Math.ceil(dataArray.length / size);
+  if (dataArray && dataArray.length > 0) {
+    // Paginated content generation
+    const totalPages = Math.ceil(dataArray.length / size);
+    for (let i = 0; i < totalPages; i++) {
+      const pageData = dataArray.slice(i * size, (i + 1) * size);
 
-  for (let i = 0; i < totalPages; i++) {
-    const pageData = dataArray.slice(i * size, (i + 1) * size);
-
-    const pageContent = nunjucks.renderString(layout, {
-      ...env,
-      [alias]: pageData,
-    });
-
-    for (let j = 0; j < pageData.length; j++) {
-      const permalink = nunjucks.renderString(permalinkTemplate, {
-        [alias]: pageData[j],
+      const pageContent = nunjucks.renderString(layout, {
+        ...env,
+        [alias]: pageData,
       });
 
-      const outputPath = path.join(destBaseFolder, permalink, "index.html");
-      const outputFolder = path.dirname(outputPath);
+      for (let j = 0; j < pageData.length; j++) {
+        const permalink = nunjucks.renderString(permalinkTemplate, {
+          [alias]: pageData[j],
+        });
 
-      await fs.promises.mkdir(outputFolder, { recursive: true });
-      await fs.promises.writeFile(outputPath, pageContent, "utf8");
+        for (const outputFolder of outputFolders) {
+          const outputPath = path.join(
+            destBaseFolder,
+            outputFolder,
+            permalink,
+            "index.html"
+          );
+          const outputDir = path.dirname(outputPath);
+
+          await fs.promises.mkdir(outputDir, { recursive: true });
+          await fs.promises.writeFile(outputPath, pageContent, "utf8");
+          console.log(`Successfully created ${outputPath}`);
+        }
+      }
+    }
+  } else {
+    // Single page content generation
+    for (const outputFolder of outputFolders) {
+      let outputPath;
+      if (isIndexFile) {
+        outputPath = path.join(destBaseFolder, "index.html");
+      } else {
+        outputPath = path.join(
+          destBaseFolder,
+          outputFolder,
+          permalinkTemplate,
+          "index.html"
+        );
+      }
+      const outputDir = path.dirname(outputPath);
+
+      await fs.promises.mkdir(outputDir, { recursive: true });
+      await fs.promises.writeFile(outputPath, layout, "utf8");
       console.log(`Successfully created ${outputPath}`);
     }
   }
@@ -169,49 +196,37 @@ fs.readdir(sourceFolder, async (err, files) => {
           const paginationData = eval(frontMatter.pagination.data); // Ensure this is safe or pre-process it
           const size = frontMatter.pagination.size || 1;
           const alias = frontMatter.pagination.alias || "contentarray";
-          const permalinkTemplate =
-            frontMatter.permalink || "/guides/{{ contentarray.slug }}/";
+          const permalinkTemplate = frontMatter.permalink || "/";
+          const outputFolders = frontMatter.outputFolder
+            ? frontMatter.outputFolder.split(",").map((folder) => folder.trim())
+            : [path.basename(file, ".njk")];
 
-          await generatePaginatedContent(
+          await generateContent(
             paginationData,
             size,
             alias,
             permalinkTemplate,
             finalContent,
-            env
+            env,
+            outputFolders,
+            file === "index.njk"
           );
         } else {
-          // Handle the default output path if no specific paths are defined
-          const outputPaths = frontMatter.outputPaths || [];
-          for (const outputPath of outputPaths) {
-            const newFolderPath = path.join(destBaseFolder, outputPath);
-            const newFilePath = path.join(newFolderPath, "index.html");
+          // Single page handling based on front matter
+          const outputFolders = frontMatter.outputFolder
+            ? frontMatter.outputFolder.split(",").map((folder) => folder.trim())
+            : [path.basename(file, ".njk")];
 
-            await fs.promises.mkdir(newFolderPath, { recursive: true });
-            await fs.promises.writeFile(newFilePath, finalContent, "utf8");
-            console.log(`Successfully created ${newFilePath}`);
-          }
-
-          if (outputPaths.length === 0) {
-            const fileNameWithoutExt = path.basename(file, ".njk");
-            if (fileNameWithoutExt === "index") {
-              // Render as index.html directly in the root
-              const newFilePath = path.join(destBaseFolder, "index.html");
-              await fs.promises.writeFile(newFilePath, finalContent, "utf8");
-              console.log(`Successfully created ${newFilePath}`);
-            } else {
-              // Render in a folder named after the file
-              const newFolderPath = path.join(
-                destBaseFolder,
-                fileNameWithoutExt
-              );
-              const newFilePath = path.join(newFolderPath, "index.html");
-
-              await fs.promises.mkdir(newFolderPath, { recursive: true });
-              await fs.promises.writeFile(newFilePath, finalContent, "utf8");
-              console.log(`Successfully created ${newFilePath}`);
-            }
-          }
+          await generateContent(
+            [],
+            1, // Size 1 since it's a single page
+            "content", // Default alias for single page content
+            frontMatter.permalink || "/",
+            finalContent,
+            env,
+            outputFolders,
+            file === "index.njk"
+          );
         }
       } catch (err) {
         console.error("Error processing the Nunjucks file:", err);

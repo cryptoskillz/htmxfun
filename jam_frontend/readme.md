@@ -35,3 +35,15 @@ This will start the server
 
 Note we could move the whole thing in a cloudflare pages and then the functions and workers would be in the same place but this is the most basic example
 it would be easy to do a single page site using a simple router but i like jamstack
+
+## example to use front matter
+
+layout: layout
+title: "home2"
+pagination:
+data: apiData # Adjust this to match your data structure
+size: 1
+alias: contentarray
+permalink: /guides/{{ contentarray.id }}/
+
+---

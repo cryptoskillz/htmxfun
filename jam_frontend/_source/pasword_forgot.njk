@@ -1,0 +1,27 @@
+---
+outputFolder: forgotpassword
+layout: layout_external
+title: "forgot password"
+---
+
+<div>
+  <form
+    hx-post="{{ API_JWT_URL }}"
+    hx-vals='{"workerAction": "doForgotPassword"}'
+    hx-target="#responseText"
+    hx-swap="innerHTML"
+    class="pure-form pure-form-stacked"
+  >
+    <label for="email"> Email </label>
+    <input
+      type="email"
+      name="email"
+      placeholder="enter email"
+      id="email"
+      required
+    />
+
+    <button class="pure-button" type="submit">Submit</button>
+    <a href="/login/" class="pure-button">Cancel</a>
+  </form>
+</div>
