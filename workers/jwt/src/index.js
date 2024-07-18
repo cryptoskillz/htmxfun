@@ -268,7 +268,7 @@ export default {
 				//this is faking the email worker until we recode it
 				//console.log(`${env.FRONTEND_URL}changepassword/?verifyCode=${verifyCode}`);
 				const responseEmail = await sendEmail(
-					`${env.FRONTEND_URL}changepassword/?verifyCode=${verifyCode}`,
+					`Please click <a href="${env.FRONTEND_URL}changepassword/?verifyCode=${verifyCode}">here</a> to change your password`,
 					'Change your password',
 					'',
 					body.email
