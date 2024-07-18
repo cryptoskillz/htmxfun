@@ -625,7 +625,7 @@ function renderSelectField(field, formData, lookupData) {
 		.join('');
 	return `
         <label for="${field.name}">${field.name}</label>
-        <select id="${field.name}" name="${field.name}" class="pure-input-1">
+        <select id="${field.name}" name="${field.name}">
             ${options}
         </select>
     `;

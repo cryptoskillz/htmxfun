@@ -17,9 +17,7 @@ store the password as a hash in the database
 ## database worker tasks
 
 if the inputType is set to text and it has a swingtable it is rendering it as a select
-maybe we should show the extendedTyoe action post submit so they see it in the form (not essential)
 
 ## jamstack
 
-decide if we want to make other messages disappear after one second if not we don't have to use script.js other than token setting
-change select input to the correct pure class
+Messages that we do not want to disapera
