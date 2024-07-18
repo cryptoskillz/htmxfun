@@ -10,16 +10,21 @@ work out how to add joins maybe move it all to prisma to standarise things
 
 recode the sendemail funciton we just have a debug at the moment to use for testing (doSignUp,doVerify,DochangePassword)
 in sign up we may want to check if there is username / name before splitting the email.
+update jwt to use the new worker
 
 ## email worker tasks
 
-upgrade email to mailchannels https://www.fadhil-blog.dev/blog/cloudflare-worker-send-email/
+pass in the following information in the body
+
+const receiver = 'chrisjmccreadie@protonmail.com';
+const receiverName = 'chris';
+const subject = 'test';
+const emailOutputUrl = 'http://www.gah.com'
 
 ## database worker tasks
 
-render field
-make sure it works with multipile swing tables
-make swing table work with boundtotable
+if the inputType is set to text and it has a swingtable it is rendering it as a select
+maybe we should show the extendedTyoe action post submit so they see it in the form (not essential)
 
 ## jamstack
 

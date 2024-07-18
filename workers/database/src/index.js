@@ -19,6 +19,15 @@ const lookupData = [
 			{ fieldName: 'dave', fieldValue: '2' },
 		],
 	},
+	{
+		fieldName: 'guid',
+		boundToTable: '', // Set to specific table name if bound, otherwise false
+		swingTable: 'swingGUID',
+		data: [
+			{ fieldName: 'ewrwerew', fieldValue: '1' },
+			{ fieldName: 'darwerwerve', fieldValue: '2' },
+		],
+	},
 ];
 
 //fields to use, should be using prisma really for this
@@ -523,6 +532,11 @@ async function renderForm(renderType, tableName, fields, formData, env) {
 		fields
 			.filter((field) => !blackListFields.includes(field.name))
 			.map(async (field) => {
+				// Ensure fields with inputType 'text' are always rendered as text input
+				console.log(field);
+				if (field.inputType === 'text') {
+					return renderInputField(field, formData, renderType);
+				}
 				let lookupDataFiltered = lookupData.filter(
 					(lookup) => lookup.fieldName === field.name && (lookup.boundToTable === tableName || !lookup.boundToTable)
 				);

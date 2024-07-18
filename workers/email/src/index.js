@@ -1,48 +1,64 @@
-/**
-email worker
- */
 export default {
 	async fetch(request, env) {
-		//handle the post
-		if (request.method == 'POST') {
-			let method = '';
-			const theData = await request.json();
-			const data = {
-				From: `${env.EMAIL_FROM}`,
-				To: `${theData.to}`,
-			};
-			//build the api call
-			if (theData.templateId != void 0) {
-				method = 'email/withTemplate';
-				data.TemplateId = theData.templateId;
-				data.TemplateModel = theData.templateVariables;
-			} else {
-				method = 'email';
-				if (theData.subject != void 0) data.Subject = theData.subject;
-				if (theData.textBody != void 0) data.TextBody = theData.textBody;
-				if (theData.htmlBody != void 0) data.HextBody = theData.htmlBody;
-			}
-			//build the api call
-			const options = {
-				method: 'POST',
-				headers: {
-					Accept: 'application/json',
-					'Content-Type': 'application/json',
-					'X-Postmark-Server-Token': env.EMAIL_TOKEN,
+		const content = [
+			{
+				type: 'text/html',
+				value: '<h1>Hello from Cloudflare worker</h1>',
+			},
+		];
+
+		const receiver = 'chrisjmccreadie@protonmail.com';
+		const receiverName = 'chris';
+		const subject = 'test';
+		const send_request = new Request(env.EMAIL_API_URL, {
+			method: 'POST',
+			headers: {
+				'content-type': 'application/json',
+			},
+			body: JSON.stringify({
+				personalizations: [
+					{
+						to: [{ email: receiver, name: receiverName }],
+					},
+				],
+				from: {
+					email: env.EMAIL_FROM,
+					name: env.SENDER_EMAIL_NAME,
 				},
-				body: JSON.stringify(data),
-			};
-			//call the api
-			const response = await fetch(env.EMAIL_API + method, options);
-			//console.log(response);
-			//handle the response
-			if (response.ok) {
-				return new Response(JSON.stringify({ message: 'Email sent!' }, 200));
-			} else {
-				return new Response(JSON.stringify({ message: 'An error occurred' }, 400));
-			}
-		} else {
-			return new Response(JSON.stringify({ message: 'POST ONLY' }, 400));
-		}
+				subject: subject,
+				content: content,
+			}),
+		});
+
+		// Clone the request to read its body separately
+		const requestClone = send_request.clone();
+
+		// Extract properties for detailed logging
+		const requestUrl = send_request.url;
+		const requestMethod = send_request.method;
+		const requestHeaders = {};
+		send_request.headers.forEach((value, key) => {
+			requestHeaders[key] = value;
+		});
+
+		/*
+		as we cannot run this locally we sometimes have to log
+		to do this unghost this URL and run
+
+		sudo wrangler --tail 
+
+		const requestBody = await requestClone.text();
+
+		console.log('send_request URL:', requestUrl);
+		console.log('send_request Method:', requestMethod);
+		console.log('send_request Headers:', JSON.stringify(requestHeaders, null, 2));
+		console.log('send_request Body:', requestBody);
+
+		const resp = await fetch(send_request);
+		const respText = await resp.text();
+
+		console.log('Response:', respText);
+		*/
+		return new Response(await resp.ok);
 	},
 };
