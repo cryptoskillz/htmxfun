@@ -102,6 +102,38 @@ export default {
 			});
 		}
 
+		async function sendEmail(content = '', subject = '', username = '', email = '') {
+			//check if all parameters are set
+			if (!content || !subject || !email) {
+				throw new Error('All parameters are required: content, subject, username, email');
+			}
+			//check if the username is blank and get it from the email, we could also get it from the database
+			if (username == '' && email != '') username = email.split('@')[0];
+
+			//set the email object
+			const emailObj = {
+				email_from: env.EMAIL_FROM,
+				frontend_url: env.FRONTEND_URL,
+				api_url: env.API_URL,
+				product_name: env.PRODUCT_NAME,
+				sender_email_name: env.SENDER_EMAIL_NAME,
+				receiver: email,
+				receiverName: username,
+				subject: subject,
+				content: content,
+			};
+			//send the email
+			const emailResponse = await fetch(env.EMAIL_API_URL, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify(emailObj),
+			});
+			//maybe we can check if debug data is set
+			if (emailResponse.debug != '') console.log(emailResponse);
+			return emailResponse;
+		}
 		/**
 		 * A function that processes a user signup.
 		 *
@@ -142,28 +174,12 @@ export default {
 				if (data.success == true) {
 					//this is faking the email worker until we recode it
 					//console.log(`${env.FRONTEND_URL}verify/?verifyCode=${verifyCode}`);
-					const emailObj = {
-						email_from: env.EMAIL_FROM,
-						frontend_url: env.FRONTEND_URL,
-						api_url: env.API_URL,
-						product_name: env.PRODUCT_NAME,
-						sender_email_name: env.SENDER_EMAIL_NAME,
-						receiver: body.email,
-						receiverName: username,
-						subject: 'Thank you for signing up',
-						content: `Click here to verify ${env.FRONTEND_URL}verify/?verifyCode=${verifyCode}`,
-					};
-					const emailUrl = env.EMAIL_API_URL;
-					//send the email
-					const emailResponse = await fetch(emailUrl, {
-						method: 'POST',
-						headers: {
-							'Content-Type': 'application/json',
-						},
-						body: JSON.stringify(emailObj),
-					});
-					//console.log('emailResponse');
-					//console.log(emailResponse);
+					const responseEmail = await sendEmail(
+						`thank you for signing up Please verify your email <a href="${env.FRONTEND_URL}verify/?verifyCode=${verifyCode}">here</a>`,
+						'Verify your Email',
+						username,
+						body.email
+					);
 					responseMessage = `Signup successful`;
 				} else responseMessage = `Signup not successful`;
 			}
@@ -250,7 +266,13 @@ export default {
 				const data = await executeQuery(env.DB, query, false, false);
 				//send the email
 				//this is faking the email worker until we recode it
-				console.log(`${env.FRONTEND_URL}changepassword/?verifyCode=${verifyCode}`);
+				//console.log(`${env.FRONTEND_URL}changepassword/?verifyCode=${verifyCode}`);
+				const responseEmail = await sendEmail(
+					`${env.FRONTEND_URL}changepassword/?verifyCode=${verifyCode}`,
+					'Change your password',
+					'',
+					body.email
+				);
 				responseMessage = `Password reset sent to your email click <a href="/">here</a>`;
 				//todo send email, update user account to isVerifed = 0
 			} else responseMessage = `wrong email address`;

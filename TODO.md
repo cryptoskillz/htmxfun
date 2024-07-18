@@ -8,20 +8,10 @@ work out how to add joins maybe move it all to prisma to standarise things
 
 ## jwt worker tasks
 
-replace email debug which we use at the moment to use for testing (doSignUp,doVerify,DochangePassword)
-add the worker email
-build the correct body object
-make the call
+test all the emails
 in sign up we may want to check if there is username / name before splitting the email.
 
 ## email worker tasks
-
-pass in the following information in the body
-
-const receiver = 'chrisjmccreadie@protonmail.com';
-const receiverName = 'chris';
-const subject = 'test';
-const emailOutputUrl = 'http://www.gah.com'
 
 ## database worker tasks
 
