@@ -6,7 +6,7 @@ compatibility_flags = ["nodejs_compat"]
 
 
 [vars]
-vars = {SECRET_KEY = "ASFSDFJDSJFJDSKFSDKLJF1314234234",EMAIL_FROM="info@orbitlabs.xyz", FRONTEND_URL= "http://127.0.0.1:8080/",API_URL = "https://test3.orbitlabsworker.workers.dev/", EMAIL_API_URL="https://email-mailchannel.orbitlabsworker.workers.dev",  PRODUCT_NAME="HTMX Fun", SENDER_EMAIL_NAME="htmxfun"}
+vars = {SECRET_KEY = "ASFSDFJDSJFJDSKFSDKLJF1314234234",EMAIL_FROM="info@orbitlabs.xyz", FRONTEND_URL= "http://127.0.0.1:8080/",API_URL = "https://htmxdatabase.orbitlabsworker.workers.dev", EMAIL_API_URL="https://email-mailchannel.orbitlabsworker.workers.dev",  PRODUCT_NAME="HTMX Fun", SENDER_EMAIL_NAME="htmxfun"}
 
 
 [[d1_databases]]

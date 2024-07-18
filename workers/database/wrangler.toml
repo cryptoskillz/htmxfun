@@ -1,5 +1,5 @@
 #:schema node_modules/wrangler/config-schema.json
-name = "test3"
+name = "htmxdatabase"
 main = "src/index.js"
 compatibility_date = "2024-06-20"
 compatibility_flags = ["nodejs_compat"]
@@ -13,7 +13,7 @@ database_name = "htmx"
 database_id = "b9b6406b-0c3a-4e07-aa4d-3ac5e550dd53"
 
 [env.production]
-vars = {API_URL = "https://test3.orbitlabsworker.workers.dev/",SECRET_KEY = "ASFSDFJDSJFJDSKFSDKLJF1314234234"}
+vars = {API_URL = "https://htmxdatabase.orbitlabsworker.workers.dev",SECRET_KEY = "ASFSDFJDSJFJDSKFSDKLJF1314234234"}
 
 [[env.production.d1_databases]]
 binding = "DB"

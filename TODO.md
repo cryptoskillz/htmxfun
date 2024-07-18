@@ -1,5 +1,10 @@
 # TODO
 
+## toml
+
+figure how we can deploy prod vars without adding production to the name
+change API_URL to database URL
+
 ## buildit
 
 join all the js file into one (or leave to cloudflare / ci)

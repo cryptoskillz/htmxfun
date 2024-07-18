@@ -15,8 +15,8 @@ const envConfigs = {
   production: {
     ...commonConfig,
     ENVIRONMENT: "production",
-    API_URL: "https://test3.orbitlabsworker.workers.dev",
-    API_JWT_URL: "https://jwt.orbitlabsworker.workers.dev",
+    API_URL: "https://htmxdatabase.orbitlabsworker.workers.dev/",
+    API_JWT_URL: "https://jwt.orbitlabsworker.workers.dev/",
   },
 };
 

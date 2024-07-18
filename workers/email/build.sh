@@ -11,7 +11,7 @@ kill_rogue_processes() {
 # Build remote database
 if [ "$1" == "deploy" ]; then
     echo "deploying email worker"
-    sudo npx wrangler deploy --env production
+    sudo npx wrangler deploy 
     exit 0
 fi
 
