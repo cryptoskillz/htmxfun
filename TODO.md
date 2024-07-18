@@ -2,8 +2,7 @@
 
 ## toml
 
-figure how we can deploy prod vars without adding production to the name
-change API_URL to database URL
+change API_URL to to DATABASE_URL
 
 ## buildit
 

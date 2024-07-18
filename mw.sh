@@ -13,11 +13,11 @@ deploy_workers() {
     echo "Deploying workers"
     cd workers/database
     echo "Publishing database worker"
-    sudo npx wrangler deploy 
+    sudo npx wrangler deploy --env production
     cd ..
     cd jwt
     echo "Publishing jwt worker"
-    sudo npx wrangler deploy 
+    sudo npx wrangler deploy --env production
     cd ..
     cd email
     echo "Publishing email worker"
