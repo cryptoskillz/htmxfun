@@ -23,7 +23,7 @@ fi
 # Build remote database
 if [ "$1" == "deploy" ]; then
     echo "deploying database worker"
-    sudo npx wrangler deploy 
+    sudo npx wrangler deploy --env production
     exit 0
 fi
 
