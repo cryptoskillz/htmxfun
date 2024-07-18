@@ -105,7 +105,7 @@ export default {
 		async function sendEmail(content = '', subject = '', username = '', email = '') {
 			//check if all parameters are set
 			if (!content || !subject || !email) {
-				throw new Error('All parameters are required: content, subject, username, email');
+				throw new Error('All parameters are required: content, subject, email');
 			}
 			//check if the username is blank and get it from the email, we could also get it from the database
 			if (username == '' && email != '') username = email.split('@')[0];
@@ -114,7 +114,7 @@ export default {
 			const emailObj = {
 				email_from: env.EMAIL_FROM,
 				frontend_url: env.FRONTEND_URL,
-				api_url: env.API_URL,
+				api_url: env.DATABASE_URL,
 				product_name: env.PRODUCT_NAME,
 				sender_email_name: env.SENDER_EMAIL_NAME,
 				receiver: email,
@@ -163,10 +163,13 @@ export default {
 				let apiSecret = uuid.v4();
 				//get a verify code
 				let verifyCode = uuid.v4();
-				//get the name from the email
-				const username = body.email.split('@')[0];
+				//check if we have to get the name from the email
+				let signupUsername = '';
+				let signupName = '';
+				if (body.username == '') signupUsername = body.email.split('@')[0];
+				if (body.name == '') signupName = body.email.split('@')[0];
 				//create the user
-				query = `INSERT INTO user (name,username,email,password,apiSecret,confirmed,isBlocked,isAdmin,verifyCode) VALUES ('${username}','${username}','${body.email}','${body.password}','${apiSecret}',0, 0,0,'${verifyCode}')`;
+				query = `INSERT INTO user (name,username,email,password,apiSecret,confirmed,isBlocked,isAdmin,verifyCode) VALUES ('${signupName}','${signupUsername}','${body.email}','${body.password}','${apiSecret}',0, 0,0,'${verifyCode}')`;
 				data = await executeQuery(env.DB, query, false, false);
 				//debug ghost out the line and enable the enable
 				//data.success = true;

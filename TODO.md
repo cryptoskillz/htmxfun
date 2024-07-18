@@ -2,8 +2,6 @@
 
 ## toml
 
-change API_URL to to DATABASE_URL
-
 ## buildit
 
 join all the js file into one (or leave to cloudflare / ci)
@@ -12,7 +10,6 @@ work out how to add joins maybe move it all to prisma to standarise things
 
 ## jwt worker tasks
 
-in sign up we may want to check if there is username / name before splitting the email.
 store the password as a hash in the database
 
 ## email worker tasks

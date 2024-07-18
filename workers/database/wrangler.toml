@@ -14,7 +14,7 @@ database_id = "b9b6406b-0c3a-4e07-aa4d-3ac5e550dd53"
 
 [env.production]
 name = "htmxdatabase"  
-vars = {API_URL = "https://htmxdatabase.orbitlabsworker.workers.dev",SECRET_KEY = "ASFSDFJDSJFJDSKFSDKLJF1314234234"}
+vars = {DATABASE_URL = "https://htmxdatabase.orbitlabsworker.workers.dev",SECRET_KEY = "ASFSDFJDSJFJDSKFSDKLJF1314234234"}
 
 [[env.production.d1_databases]]
 binding = "DB"
@@ -22,7 +22,7 @@ database_name = "htmx"
 database_id = "b9b6406b-0c3a-4e07-aa4d-3ac5e550dd53"
 
 [env.local]
-vars = {API_URL = "http://localhost:8787/",SECRET_KEY = "ASFSDFJDSJFJDSKFSDKLJF1314234234"}
+vars = {DATABASE_URL = "http://localhost:8787/",SECRET_KEY = "ASFSDFJDSJFJDSKFSDKLJF1314234234"}
 
 [[env.local.d1_databases]]
 binding = "DB"

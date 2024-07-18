@@ -489,7 +489,7 @@ function renderTable(fields, data, tableName, env, workerAction) {
 				${fields.map((field) => `<td>${row[field.name]}</td>`).join('')}
 				<td>
 					<a class="pure-button" href="/${tableName}/edit/?id=${row.id}">Edit</a>
-					<button class="pure-button" hx-delete="${env.API_URL}${tableName}/${row.id}" 
+					<button class="pure-button" hx-delete="${env.DATABASE_URL}${tableName}/${row.id}" 
 							hx-trigger='confirmed'
 							hx-target="#responseText"
 							hx-swap="innerHTML"
@@ -576,7 +576,7 @@ async function renderForm(renderType, tableName, fields, formData, env) {
 
 	// Construct form HTML based on renderType, tableName, etc.
 	const formAction = renderType === 'formedit' ? 'hx-put' : 'hx-post';
-	const formUrl = renderType === 'formedit' ? `${env.API_URL}${tableName}/${formData.id}` : `${env.API_URL}${tableName}/`;
+	const formUrl = renderType === 'formedit' ? `${env.DATABASE_URL}${tableName}/${formData.id}` : `${env.DATABASE_URL}${tableName}/`;
 	return `
         <form class="pure-form pure-form-stacked" ${formAction}="${formUrl}" hx-target="#responseText" hx-swap="innerHTML">
             ${formFields.join('')}
