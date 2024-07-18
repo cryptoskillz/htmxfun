@@ -141,7 +141,29 @@ export default {
 				//check if the user was created
 				if (data.success == true) {
 					//this is faking the email worker until we recode it
-					console.log(`${env.FRONTEND_URL}verify/?verifyCode=${verifyCode}`);
+					//console.log(`${env.FRONTEND_URL}verify/?verifyCode=${verifyCode}`);
+					const emailObj = {
+						email_from: env.EMAIL_FROM,
+						frontend_url: env.FRONTEND_URL,
+						api_url: env.API_URL,
+						product_name: env.PRODUCT_NAME,
+						sender_email_name: env.SENDER_EMAIL_NAME,
+						receiver: body.email,
+						receiverName: username,
+						subject: 'Thank you for signing up',
+						content: `Click here to verify ${env.FRONTEND_URL}verify/?verifyCode=${verifyCode}`,
+					};
+					const emailUrl = env.EMAIL_API_URL;
+					//send the email
+					const emailResponse = await fetch(emailUrl, {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json',
+						},
+						body: JSON.stringify(emailObj),
+					});
+					//console.log('emailResponse');
+					//console.log(emailResponse);
 					responseMessage = `Signup successful`;
 				} else responseMessage = `Signup not successful`;
 			}

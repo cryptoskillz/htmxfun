@@ -8,9 +8,11 @@ work out how to add joins maybe move it all to prisma to standarise things
 
 ## jwt worker tasks
 
-recode the sendemail funciton we just have a debug at the moment to use for testing (doSignUp,doVerify,DochangePassword)
+replace email debug which we use at the moment to use for testing (doSignUp,doVerify,DochangePassword)
+add the worker email
+build the correct body object
+make the call
 in sign up we may want to check if there is username / name before splitting the email.
-update jwt to use the new worker
 
 ## email worker tasks
 
@@ -29,3 +31,4 @@ maybe we should show the extendedTyoe action post submit so they see it in the f
 ## jamstack
 
 decide if we want to make other messages disappear after one second if not we don't have to use script.js other than token setting
+change select input to the correct pure class

@@ -1,13 +1,7 @@
 export default {
 	async fetch(request, env) {
-		async function debutIt(send_request) {
-			/*
-			as we cannot run this locally we sometimes have to log, run  the command below from the terminal
-				sudo wrangler --tail 
-			*/
-			// Clone the request to read its body separately
+		async function debugIt(send_request) {
 			const requestClone = send_request.clone();
-			// Extract properties for detailed logging
 			const requestUrl = send_request.url;
 			const requestMethod = send_request.method;
 			const requestHeaders = {};
@@ -15,50 +9,73 @@ export default {
 				requestHeaders[key] = value;
 			});
 			const requestBody = await requestClone.text();
-			console.log('send_request URL:', requestUrl);
-			console.log('send_request Method:', requestMethod);
-			console.log('send_request Headers:', JSON.stringify(requestHeaders, null, 2));
-			console.log('send_request Body:', requestBody);
-			const resp = await fetch(send_request);
-			const respText = await resp.text();
-			console.log('Response:', respText);
+			const logData = {
+				url: requestUrl,
+				method: requestMethod,
+				headers: requestHeaders,
+				body: requestBody,
+			};
+			console.log('Debug Data:', JSON.stringify(logData, null, 2));
+			return logData;
 		}
 
-		//this will be passed in the body from the worker
-		const content = [
-			{
-				type: 'text/html',
-				value: '<h1>Hello from Cloudflare worker</h1>',
-			},
-		];
-		const receiver = 'chrisjmccreadie@protonmail.com';
-		const receiverName = 'chris';
-		const subject = 'test';
+		async function parseRequestBody(request) {
+			const contentType = request.headers.get('content-type');
+			if (contentType && contentType.includes('application/json')) {
+				return await request.json();
+			} else {
+				return Object.fromEntries(await request.formData());
+			}
+		}
 
-		//build the email
-		const send_request = new Request(env.EMAIL_API_URL, {
-			method: 'POST',
-			headers: {
-				'content-type': 'application/json',
-			},
-			body: JSON.stringify({
-				personalizations: [
-					{
-						to: [{ email: receiver, name: receiverName }],
-					},
-				],
-				from: {
-					email: env.EMAIL_FROM,
-					name: env.SENDER_EMAIL_NAME,
+		if (request.method === 'POST') {
+			const body = await parseRequestBody(request);
+			const send_request = new Request(env.EMAIL_API_URL, {
+				method: 'POST',
+				headers: {
+					'content-type': 'application/json',
 				},
-				subject: subject,
-				content: content,
-			}),
-		});
+				body: JSON.stringify({
+					personalizations: [
+						{
+							to: [{ email: body.receiver, name: body.receiverName }],
+						},
+					],
+					from: {
+						email: body.email_from,
+						name: body.sender_email_name,
+					},
+					subject: body.subject,
+					content: [
+						{
+							type: 'text/html',
+							value: body.content,
+						},
+					],
+				}),
+			});
 
-		//unghost this if you want to debug
-		//debugIt(send_request);
+			//send back debug information
+			//const debugData = await debugIt(send_request);
+			const debugData = '';
+			const resp = await fetch(send_request);
 
-		return new Response(await resp.ok);
+			// Return debug data as part of the response for debugging
+			return new Response(
+				JSON.stringify(
+					{
+						debug: debugData,
+						emailResponse: await resp.json(),
+					},
+					null,
+					2
+				),
+				{
+					headers: { 'Content-Type': 'application/json' },
+				}
+			);
+		}
+
+		return new Response('Method not allowed', { status: 405 });
 	},
 };
