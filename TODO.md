@@ -29,5 +29,3 @@ maybe we should show the extendedTyoe action post submit so they see it in the f
 ## jamstack
 
 decide if we want to make other messages disappear after one second if not we don't have to use script.js other than token setting
-
-ww
