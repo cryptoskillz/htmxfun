@@ -2,14 +2,11 @@ export default {
 	async fetch(request, env) {
 		async function debutIt(send_request) {
 			/*
-		as we cannot run this locally we sometimes have to log
-		to do this unghost this URL and run
-
-			sudo wrangler --tail 
-		*/
+			as we cannot run this locally we sometimes have to log, run  the command below from the terminal
+				sudo wrangler --tail 
+			*/
 			// Clone the request to read its body separately
 			const requestClone = send_request.clone();
-
 			// Extract properties for detailed logging
 			const requestUrl = send_request.url;
 			const requestMethod = send_request.method;
