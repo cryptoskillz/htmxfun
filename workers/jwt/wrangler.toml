@@ -20,7 +20,7 @@ database_id = "b9b6406b-0c3a-4e07-aa4d-3ac5e550dd53"
 
 [env.production]
 name = "jwt"  # Add this line to specify the worker name for production
-vars = {DATABASE_URL = "https://htmxdatabase.orbitlabsworker.workers.dev", SECRET_KEY = "ASFSDFJDSJFJDSKFSDKLJF1314234234", EMAIL_FROM="info@orbitlabs.xyz", FRONTEND_URL= "http://127.0.0.1:8080/", EMAIL_API_URL="https://email-mailchannel.orbitlabsworker.workers.dev", PRODUCT_NAME="HTMX Fun", SENDER_EMAIL_NAME="htmxfun"}
+vars = {DISABLE_EMAIL= false,DATABASE_URL = "https://htmxdatabase.orbitlabsworker.workers.dev", SECRET_KEY = "ASFSDFJDSJFJDSKFSDKLJF1314234234", EMAIL_FROM="info@orbitlabs.xyz", FRONTEND_URL= "http://127.0.0.1:8080/", EMAIL_API_URL="https://email-mailchannel.orbitlabsworker.workers.dev", PRODUCT_NAME="HTMX Fun", SENDER_EMAIL_NAME="htmxfun"}
 
 [[env.production.d1_databases]]
 binding = "DB"
@@ -28,7 +28,7 @@ database_name = "htmx"
 database_id = "b9b6406b-0c3a-4e07-aa4d-3ac5e550dd53"
 
 [env.local]
-vars = {SECRET_KEY = "ASFSDFJDSJFJDSKFSDKLJF1314234234", EMAIL_FROM="info@orbitlabs.xyz", FRONTEND_URL= "http://127.0.0.1:8080/", DATABASE_URL = "http://localhost:8787/", EMAIL_API_URL="https://email-mailchannel.orbitlabsworker.workers.dev", PRODUCT_NAME="HTMX Fun", SENDER_EMAIL_NAME="htmxfun"}
+vars = {DISABLE_EMAIL=true,SECRET_KEY = "ASFSDFJDSJFJDSKFSDKLJF1314234234", EMAIL_FROM="info@orbitlabs.xyz", FRONTEND_URL= "http://127.0.0.1:8080/", DATABASE_URL = "http://localhost:8787/", EMAIL_API_URL="https://email-mailchannel.orbitlabsworker.workers.dev", PRODUCT_NAME="HTMX Fun", SENDER_EMAIL_NAME="htmxfun"}
 
 [[env.local.d1_databases]]
 binding = "DB"

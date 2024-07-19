@@ -36,6 +36,7 @@ const fieldsConfig = {
 		{ name: 'id', inputType: 'integer', required: true },
 		{ name: 'name', inputType: 'text', required: true },
 		{ name: 'guid', inputType: 'text', extendedType: 'guid', disableAdd: true, disableEdit: true },
+		{ name: 'description', inputType: 'text' },
 	],
 	user: [
 		{ name: 'id', inputType: 'number', required: true },

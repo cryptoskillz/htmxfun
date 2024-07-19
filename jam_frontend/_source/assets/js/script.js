@@ -16,91 +16,81 @@ document.body.addEventListener("htmx:configRequest", function (evt) {
   } else evt.detail.parameters["authToken"] = "";
 });
 
-// htmx afterRequest processing
-/*
-note: we had to code this becuase none of the dcoumented hx function to redirect to a new url seemed to work, 
-it may not be added yet or we may be dumb.  We look back and try to fix this later
+function observeTextContentChange(elementId, timeout) {
+  // Check if the element exists and set it to the targetElement variable
+  const targetElement = document.getElementById(elementId);
+  if (!targetElement) {
+    console.error(`Element with ID ${elementId} not found.`);
+    return;
+  }
 
-also. it does not handle codes very for example if i get a 401 I want to update the respose div and be done with it 
-but you cannot target multipile divs.  There is an onError event were the 401's go but the afterRequest is still fired and as 
-I want to do other stuff based on response I may as well deal with it all here. 
+  // Store the original content
+  const originalContent = targetElement.textContent;
 
-THere are extsnsions to deal with it but i dont want to load a full extension for 4 lines of JS
+  // Create a MutationObserver to observe textContent changes in the target element
+  const observer = new MutationObserver((mutationsList) => {
+    // Check if the mutation is a textContent change
+    for (let mutation of mutationsList) {
+      // Check if the mutation is a textContent change
+      if (mutation.type === "childList" || mutation.type === "characterData") {
+        // Log the detected change (optional)
+        let newContent = targetElement.textContent;
+        // Update the element's content after the specified duration
+        setTimeout(() => {
+          targetElement.textContent = originalContent;
+        }, timeout);
+        break;
+      }
+    }
+  });
 
-https://extensions.htmx.org/
-https://github.com/bigskysoftware/htmx-extensions/blob/main/src/response-targets/README.md
-
-What would be be ideal would to be able to deal with error responses 40x differently from success ones so we can have different flows
-
-It would also be be great to extend the afterRequest and also have a  afterRequestDataIsJSON as there is a lot of times, login etc 
-where you dont want to render any HTML you just want do something based on the response I.E store and auth token or redirect after a sucessful
-login
-
-
-*/
-
-function timeout(responseElement, textContent = "") {
-  setTimeout(function () {
-    responseElement.textContent = textContent;
-  }, 1000); // 1000 milliseconds = 1 second
+  // Start observing the target element for changes in child nodes and character data
+  observer.observe(targetElement, {
+    childList: true,
+    characterData: true,
+    subtree: true,
+  });
 }
-document.addEventListener("htmx:afterRequest", function (event) {
-  //set the redirect URL
-  let redirectUrl = "";
-  //set the repsonse element
+
+// Event listener for HTMX swaps to detect HTTP status codes
+document.body.addEventListener("htmx:beforeSwap", (event) => {
+  // Get the response headers
+  const xhr = event.detail.xhr;
+  const token = xhr.getResponseHeader("X-Auth-Token");
+  const deleteRow = xhr.getResponseHeader("X-Delete-Row");
+  // Get the response element
   const responseElement = document.getElementById("responseText");
-  // Check if the response is JSON
-  const contentType = event.detail.xhr.getResponseHeader("Content-Type");
-  if (contentType && contentType.includes("application/json")) {
-    try {
-      //get the JSON response
-      const responseData = JSON.parse(event.detail.xhr.response);
-      //check if its a 401
-      if (event.detail.xhr.status == 401) {
-        //set the response message
-        responseElement.textContent = responseData.message;
-        //call the timeout
-        timeout(responseElement);
-        return;
+  // Set the response text if it is not a 200
+  if (xhr.status != 200) responseElement.textContent = xhr.responseText;
+  else {
+    //check if a token has been returned and swap it
+    if (token != "") {
+      //set the token
+      localStorage.setItem("authToken", token);
+    }
+    //check for a redirect from a hidden input element
+    const redirectUrlElement = document.getElementById("redirectUrl");
+    //check if a row should be deleted
+    if (deleteRow) {
+      //delete the row
+      const targetRow = event.target.closest("tr");
+      if (targetRow) {
+        targetRow.remove();
       }
-
-      //set the response message
-      responseElement.textContent = responseData.message;
-      //call the timeout
-      timeout(responseElement);
-
-      //check the worker action
-      switch (responseData.workerAction) {
-        case "doSignup":
-          redirectUrl = "/login/";
-          break;
-        case "doLogin":
-          redirectUrl = "/home/";
-          break;
-        case "doDelete":
-          //remove the row
-          const targetRow = event.target.closest("tr");
-          if (targetRow) {
-            targetRow.remove();
-          }
-          break;
-      }
-
-      //check if there is a redirect
-      if (redirectUrl !== "" && event.detail.successful == true) {
-        //set the response message
-        responseElement.textContent = responseData.message;
-        //call the timeout to redirect
-        setTimeout(function () {
+    }
+    //check if a redirect url has been set
+    if (redirectUrlElement) {
+      const redirectUrl = redirectUrlElement.value;
+      if (redirectUrl !== "") {
+        setTimeout(() => {
           window.location.href = redirectUrl;
         }, 1000);
       }
-    } catch (e) {
-      console.error("Failed to parse JSON:", e);
     }
   }
+  // Call the observeTextContentChange function here if needed
 });
-
+observeTextContentChange("responseText", 5000);
 // Exporting the functions to make them globally accessible
 window.whenDocumentReady = whenDocumentReady;
 window.isReady = isReady;
