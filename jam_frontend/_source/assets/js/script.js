@@ -57,39 +57,51 @@ document.body.addEventListener("htmx:beforeSwap", (event) => {
   // Get the response headers
   const xhr = event.detail.xhr;
   const token = xhr.getResponseHeader("X-Auth-Token");
-  const deleteRow = xhr.getResponseHeader("X-Delete-Row");
   // Get the response element
   const responseElement = document.getElementById("responseText");
   // Set the response text if it is not a 200
-  if (xhr.status != 200) responseElement.textContent = xhr.responseText;
-  else {
+  if (xhr.status != 200) {
+    responseElement.textContent = xhr.responseText;
+    //check if code is 500 and if it is reditect them back to login
+    if (xhr.status == 500) {
+      //redirect to login
+      redirectUser("/login/");
+    }
+  } else {
     //check if a token has been returned and swap it
-    if (token != "") {
+    if (token != "" && token != null) {
       //set the token
       localStorage.setItem("authToken", token);
     }
     //check for a redirect from a hidden input element
     const redirectUrlElement = document.getElementById("redirectUrl");
-    //check if a row should be deleted
-    if (deleteRow) {
-      //delete the row
-      const targetRow = event.target.closest("tr");
-      if (targetRow) {
-        targetRow.remove();
-      }
-    }
     //check if a redirect url has been set
     if (redirectUrlElement) {
       const redirectUrl = redirectUrlElement.value;
-      if (redirectUrl !== "") {
-        setTimeout(() => {
-          window.location.href = redirectUrl;
-        }, 1000);
-      }
+      if (redirectUrl !== "") redirectUser(redirectUrl);
     }
   }
-  // Call the observeTextContentChange function here if needed
 });
+
+document.addEventListener("htmx:afterRequest", function (event) {
+  //check if a row should be deleted
+  const xhr = event.detail.xhr;
+  const deleteRow = xhr.getResponseHeader("X-Delete-Row");
+  if (deleteRow == 1) {
+    //delete the row
+    const targetRow = event.target.closest("tr");
+    if (targetRow) {
+      targetRow.remove();
+    }
+  }
+});
+
+function redirectUser(url, timeout = 2000) {
+  setTimeout(() => {
+    window.location.href = url;
+  }, timeout);
+}
+
 observeTextContentChange("responseText", 5000);
 // Exporting the functions to make them globally accessible
 window.whenDocumentReady = whenDocumentReady;

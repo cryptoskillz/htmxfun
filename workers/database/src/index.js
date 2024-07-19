@@ -36,7 +36,6 @@ const fieldsConfig = {
 		{ name: 'id', inputType: 'integer', required: true },
 		{ name: 'name', inputType: 'text', required: true },
 		{ name: 'guid', inputType: 'text', extendedType: 'guid', disableAdd: true, disableEdit: true },
-		{ name: 'description', inputType: 'text' },
 	],
 	user: [
 		{ name: 'id', inputType: 'number', required: true },
@@ -66,14 +65,7 @@ export default {
 		//get the table name
 		const tableName = hxUrl.pathname.split('/').filter(Boolean)[0]; // Get the first segment
 		const hxSearchParams = hxUrl.searchParams;
-
-		//console.log('url');
-		//console.log(url);
-		//console.log('hxUrl');
-		//console.log(hxUrl);
-
 		const workerAction = getUrlParameter(url, 'workerAction') || getUrlParameter(url, 'workerAction');
-		//console.log(workerAction);
 		//get the id
 		let id = hxSearchParams.get('id'); // Get the first segment
 		if (id == null) id = url.pathname.split('/').filter(Boolean)[1];
@@ -117,6 +109,32 @@ function handleOptions() {
 }
 
 /**
+ * Sends a response with the given body, status code, and content type.
+ *
+ * @param {any} body - The response body.
+ * @param {number} [status=200] - The HTTP status code.
+ * @param {string} [contentType='text/html'] - The content type of the response.
+ * @return {Response} The response object.
+ */
+function sendResponse(body, status = 200, contentType = 'text/html', customHeaders = {}) {
+	const headers = {
+		'Content-Type': contentType,
+		'Access-Control-Allow-Origin': '*',
+		'Access-Control-Expose-Headers': Object.keys(customHeaders).join(', '),
+	};
+
+	// Add custom headers
+	for (const [key, value] of Object.entries(customHeaders)) {
+		headers[key] = value;
+	}
+
+	return new Response(body, {
+		status,
+		headers,
+	});
+}
+
+/**
  * Retrieves the lookup data for a given table and field.
  *
  * @param {string} tableName - The name of the table.
@@ -148,12 +166,17 @@ async function getLookupData(tableName, fieldName) {
 async function handleGetRequest(request, env, tableName, params, authToken, workerAction = '') {
 	// Validate JWT
 	const jwtValid = await validateJWT(authToken, env.SECRET_KEY);
-	if (!jwtValid) return sendResponse('Unauthorized', 401, 'application/json');
+	if (!jwtValid)
+		return sendResponse(`Your Auth Token is invalid you will have to login in again`, 500, 'text/html', {
+			'X-Auth-Token': '',
+			'X-Delete-Row': 0,
+		});
 	let query;
 	let data;
 	let fields;
 	let fieldNames;
 	let returnOne = true;
+	let code = 200;
 	// get the render type
 	const renderType = determineRenderType(params);
 	// check if we want to return all the tables in the database to list in the home screen
@@ -174,13 +197,11 @@ async function handleGetRequest(request, env, tableName, params, authToken, work
 	// Retrieve fields
 	try {
 		// Render HTML
-		const htmlResponse = await renderHTML(renderType, tableName, fields, data, env, workerAction);
-
+		const responseMessage = await renderHTML(renderType, tableName, fields, data, env, workerAction);
 		// Send response
-		return sendResponse(htmlResponse, 200);
+		return sendResponse(responseMessage, code, 'text/html', { 'X-Auth-Token': '', 'X-Delete-Row': 0 });
 	} catch (error) {
 		console.error('Error executing query:', error);
-		return sendResponse(`Error executing query: ${error.message}`, 500, 'application/json');
 	}
 }
 
@@ -196,12 +217,23 @@ async function handleGetRequest(request, env, tableName, params, authToken, work
  * @return {Promise<Object>} The response object.
  */
 async function handleDataModification(request, env, id, tableName, body = '', authToken) {
+	let code = 200;
+	//set a response message
+	let responseMessage = '';
 	// Validate JWT it is either in the body, request url or the x-handle-url
 	const jwtValid = await validateJWT(authToken, env.SECRET_KEY);
-	if (!jwtValid) return sendResponse('Unauthorized', 401, 'application/json');
+	if (!jwtValid)
+		return sendResponse(`Your Auth Token is invalid you will be redirected to login`, 500, 'text/html', {
+			'X-Auth-Token': '',
+			'X-Delete-Row': 0,
+		});
 	// Handle DELETE request
 	if (request.method === 'DELETE') {
-		if (!id) return sendResponse('Missing ID for deletion', 400);
+		if (!id)
+			return sendResponse(`ID not found record not deleted`, 500, 'text/html', {
+				'X-Auth-Token': '',
+				'X-Delete-Row': 0,
+			});
 		// build the query
 		//note should we move this to build query?
 		const sql = `UPDATE ${tableName} SET isDeleted = 1 WHERE id = ${id}`;
@@ -213,7 +245,9 @@ async function handleDataModification(request, env, id, tableName, body = '', au
 			workerAction: 'doDelete',
 			statusText: 'OK',
 		};
-		return sendResponse(responseObj, 200, 'application/json');
+		responseMessage = `Record deleted successfully`;
+
+		return sendResponse(responseMessage, code, 'text/html', { 'X-Auth-Token': '', 'X-Delete-Row': 1 });
 	}
 	//get the fields and remove the ones in the blocklist
 	const fields = Object.keys(body).filter((key) => !blackListFields.includes(key));
@@ -225,12 +259,8 @@ async function handleDataModification(request, env, id, tableName, body = '', au
 	// execute the query
 	await executeQuery(env.DB, sql, true, false);
 	// send the response
-	const responseObj = {
-		message: `Record ${request.method === 'POST' ? 'added' : 'updated'} successfully`,
-		tableName: tableName,
-		statusText: 'OK',
-	};
-	return sendResponse(responseObj, 200, 'application/json');
+	responseMessage = `Record ${request.method === 'POST' ? 'added' : 'updated'} successfully`;
+	return sendResponse(responseMessage, code, 'text/html', { 'X-Auth-Token': '', 'X-Delete-Row': 0 });
 }
 
 /**
@@ -478,6 +508,7 @@ function renderTable(fields, data, tableName, env, workerAction) {
 				</thead>
 				<tbody>${tableList}</tbody>
 			</table>
+			
         `;
 	} else {
 		const rows = data.results; // Access the results array from data
@@ -514,6 +545,9 @@ function renderTable(fields, data, tableName, env, workerAction) {
 				</thead>
 				<tbody>${bodyRows}</tbody>
 			</table>
+			<div>
+				<a class="pure-button" href="add/?id=0">Add Record</a>
+			</div>
 		`;
 	}
 }
@@ -534,7 +568,6 @@ async function renderForm(renderType, tableName, fields, formData, env) {
 			.filter((field) => !blackListFields.includes(field.name))
 			.map(async (field) => {
 				// Ensure fields with inputType 'text' are always rendered as text input
-				console.log(field);
 				if (field.inputType === 'text') {
 					return renderInputField(field, formData, renderType);
 				}
@@ -582,7 +615,8 @@ async function renderForm(renderType, tableName, fields, formData, env) {
         <form class="pure-form pure-form-stacked" ${formAction}="${formUrl}" hx-target="#responseText" hx-swap="innerHTML">
             ${formFields.join('')}
             <button type="submit" class="pure-button pure-button-primary">${renderType === 'formedit' ? 'Update' : 'Add'}</button>
-            <a href="javascript:history.back()" class="pure-button pure-button-primary">Cancel</a>
+            <a href="/${tableName}/" class="pure-button pure-button-primary">Done</a>
+
         </form>
     `;
 }
@@ -660,26 +694,4 @@ async function executeQuery(db, query, returnOne = false, debug = false) {
 		console.error('Error executing query:', error);
 		throw error;
 	}
-}
-
-/**
- * Sends a response with the given body, status code, and content type.
- *
- * @param {any} body - The response body.
- * @param {number} [status=200] - The HTTP status code.
- * @param {string} [contentType='text/html'] - The content type of the response.
- * @return {Response} The response object.
- */
-function sendResponse(body, status = 200, contentType = 'text/html') {
-	// Add CORS headers based on content type
-	if (contentType == 'application/json') body = JSON.stringify(body);
-	const headers = {
-		'Content-Type': contentType,
-		'Access-Control-Allow-Origin': '*',
-	};
-	// Send response
-	return new Response(body, {
-		status,
-		headers,
-	});
 }
