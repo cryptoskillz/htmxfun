@@ -8,14 +8,6 @@ let whenDocumentReady = (f) => {
 // Ready function
 let isReady = () => {};
 
-// htmx configRequest
-document.body.addEventListener("htmx:configRequest", function (evt) {
-  // Add the auth token to the request, could move this to hx-vals
-  if (localStorage.getItem("authToken")) {
-    evt.detail.parameters["authToken"] = localStorage.getItem("authToken");
-  } else evt.detail.parameters["authToken"] = "";
-});
-
 function observeTextContentChange(elementId, timeout) {
   // Check if the element exists and set it to the targetElement variable
   const targetElement = document.getElementById(elementId);
@@ -50,6 +42,12 @@ function observeTextContentChange(elementId, timeout) {
     characterData: true,
     subtree: true,
   });
+}
+
+function redirectUser(url, timeout = 2000) {
+  setTimeout(() => {
+    window.location.href = url;
+  }, timeout);
 }
 
 // Event listener for HTMX swaps to detect HTTP status codes
@@ -96,11 +94,13 @@ document.addEventListener("htmx:afterRequest", function (event) {
   }
 });
 
-function redirectUser(url, timeout = 2000) {
-  setTimeout(() => {
-    window.location.href = url;
-  }, timeout);
-}
+// htmx configRequest
+document.body.addEventListener("htmx:configRequest", function (evt) {
+  // Add the auth token to the request, could move this to hx-vals
+  if (localStorage.getItem("authToken")) {
+    evt.detail.parameters["authToken"] = localStorage.getItem("authToken");
+  } else evt.detail.parameters["authToken"] = "";
+});
 
 observeTextContentChange("responseText", 5000);
 // Exporting the functions to make them globally accessible
