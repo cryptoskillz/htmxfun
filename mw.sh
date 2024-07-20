@@ -26,14 +26,27 @@ deploy_workers() {
 }
 
 deploy_database() {
-    local db=$2
+  
     echo "deploying $db database to database worker"
     cd workers/database/
-    npx wrangler d1 execute htmx --$db --file=../schema.sql
-    cd ../
-    echo "deploying $db database to jwt worker"
-    cd jwt/
-    npx wrangler d1 execute htmx --$db --file=../schema.sql
+    # Build local database
+    if [ "$2" == "dbl" ]; then
+        echo "Building local database for database worker"
+        sudo npx wrangler d1 execute htmx --local --file=../schema.sql
+        echo "Building local database database for jwt worker"
+        cd ../
+        cd jwt/
+        sudo npx wrangler d1 execute htmx --local --file=../schema.sql
+        exit 0
+    fi
+
+    # Build remote database
+    if [ "$2" == "dbr" ]; then
+        echo "Building remote database"
+        sudo npx wrangler d1 execute htmx --remote --file=../schema.sql
+        exit 0
+    fi
+
 }
 
 sync_databases() {

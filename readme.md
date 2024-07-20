@@ -58,6 +58,10 @@ this will kill all workers
 
 this will copy the database from jwt to the database worker
 
+### database [dbl/dvr]
+
+deploy the database to local or production
+
 ### start
 
 this will start all the workers. Not you can start then separately by using the build.sh script in each directory
