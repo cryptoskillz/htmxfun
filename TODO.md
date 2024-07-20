@@ -4,8 +4,6 @@
 
 ## buildit
 
-join all the js file into one (or leave to cloudflare / ci)
-
 ## jwt worker tasks
 
 store the password as a hash in the database
