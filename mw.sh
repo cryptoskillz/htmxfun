@@ -85,7 +85,7 @@ elif [ "$1" == "database" ]; then
 elif [ "$1" == "deploy" ]; then
     deploy_workers
 else
-    echo "Usage: $0 [kill|sync|start|deploy|database prod/local]"
+    echo "Usage: $0 [kill|sync|start|deploy|database dbl/dbr]"
     exit 1
 fi
 echo "done"
