@@ -6,8 +6,6 @@
 
 join all the js file into one (or leave to cloudflare / ci)
 
-work out how to add joins maybe move it all to prisma to standarise things
-
 ## jwt worker tasks
 
 store the password as a hash in the database
@@ -17,7 +15,6 @@ store the password as a hash in the database
 ## database worker tasks
 
 if the inputType is set to text and it has a swingtable it is rendering it as a select
+work on the table join logic (may not do this as it makes things quote complex or may use prisma)
 
 ## jamstack
-
-Messages that we do not want to disapera

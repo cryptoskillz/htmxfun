@@ -88,14 +88,18 @@ export default {
 		 * note: I switched the default contentType to application/json as thia worker does not return any html
 		 */
 
-		function sendResponse(body, status = 200, contentType = 'application/json') {
-			// Add CORS headers based on content type
-			if (contentType == 'application/json') body = JSON.stringify(body);
+		function sendResponse(body, status = 200, contentType = 'text/html', customHeaders = {}) {
 			const headers = {
 				'Content-Type': contentType,
 				'Access-Control-Allow-Origin': '*',
+				'Access-Control-Expose-Headers': Object.keys(customHeaders).join(', '),
 			};
-			// Send response
+
+			// Add custom headers
+			for (const [key, value] of Object.entries(customHeaders)) {
+				headers[key] = value;
+			}
+
 			return new Response(body, {
 				status,
 				headers,
@@ -103,6 +107,12 @@ export default {
 		}
 
 		async function sendEmail(content = '', subject = '', username = '', email = '') {
+			if (env.DISABLE_EMAIL == true) {
+				console.log('Email sending is disabled');
+				console.log(content);
+				return;
+			}
+			console.log(env.DISABLE_EMAIL);
 			//check if all parameters are set
 			if (!content || !subject || !email) {
 				throw new Error('All parameters are required: content, subject, email');
@@ -141,8 +151,6 @@ export default {
 		 * @return {Promise} A response object indicating the success or failure of the signup process.
 		 */
 		async function processSignup(body) {
-			//set a response object
-			let responseObj;
 			//set the response code
 			let code = 200;
 			//set a response message
@@ -166,8 +174,8 @@ export default {
 				//check if we have to get the name from the email
 				let signupUsername = '';
 				let signupName = '';
-				if (body.username == '') signupUsername = body.email.split('@')[0];
-				if (body.name == '') signupName = body.email.split('@')[0];
+				if (body.username == undefined) signupUsername = body.email.split('@')[0];
+				if (body.name == undefined) signupName = body.email.split('@')[0];
 				//create the user
 				query = `INSERT INTO user (name,username,email,password,apiSecret,confirmed,isBlocked,isAdmin,verifyCode) VALUES ('${signupName}','${signupUsername}','${body.email}','${body.password}','${apiSecret}',0, 0,0,'${verifyCode}')`;
 				data = await executeQuery(env.DB, query, false, false);
@@ -180,19 +188,16 @@ export default {
 					const responseEmail = await sendEmail(
 						`thank you for signing up Please verify your email <a href="${env.FRONTEND_URL}verify/?verifyCode=${verifyCode}">here</a>`,
 						'Verify your Email',
-						username,
+						signupUsername,
 						body.email
 					);
 					responseMessage = `Signup successful`;
-				} else responseMessage = `Signup not successful`;
+				} else {
+					code = 401;
+					responseMessage = `Signup not successful`;
+				}
 			}
-			//send the response
-			responseObj = {
-				message: `${responseMessage}`,
-				workerAction: body.workerAction,
-				statusText: 'OK',
-			};
-			return sendResponse(responseObj, code, 'application/json');
+			return sendResponse(`${responseMessage}`, code, 'text/html', { 'X-Auth-Token': '', 'X-Delete-Row': 0 });
 		}
 
 		/**
@@ -204,8 +209,6 @@ export default {
 		async function processLogin(body) {
 			//set a token var
 			let token;
-			//set a response object
-			let responseObj;
 			//set the response code
 			let code = 200;
 			//set a response message
@@ -226,13 +229,7 @@ export default {
 				responseMessage = `wrong email or password`;
 				code = 401;
 			}
-			//send the response
-			responseObj = {
-				message: `${responseMessage}`,
-				workerAction: body.workerAction,
-				statusText: 'OK',
-			};
-			return sendResponse(responseObj, code, 'application/json');
+			return sendResponse(`${responseMessage}`, code, 'text/html', { 'X-Auth-Token': token, 'X-Delete-Row': 0 });
 		}
 
 		async function processVerify(requestUrl) {
@@ -241,14 +238,15 @@ export default {
 			let code = 200;
 			//set a response message
 			let responseMessage = '';
-			//set the content type
-			let contentType = 'text/html';
 			//build query
 			const query = `UPDATE user SET isVerified = 1,verifyCode = '' WHERE verifyCode = '${getUrlParameter(url, 'verifyCode')}'`;
 			const data = await executeQuery(env.DB, query, false, false);
 			if (data.meta.changes > 0) responseMessage = `Verify successful, click  here to <a href="/login">Login</a>`;
-			else responseMessage = `wrong verify code`;
-			return sendResponse(responseMessage, code, contentType);
+			else {
+				code = 401;
+				responseMessage = `wrong verify code`;
+			}
+			return sendResponse(responseMessage, code, 'text/html', { 'X-Auth-Token': '', 'X-Delete-Row': 0 });
 		}
 
 		async function processForgotPassword(body) {
@@ -256,8 +254,6 @@ export default {
 			let code = 200;
 			//set a response message
 			let responseMessage = '';
-			//set the content type
-			let contentType = 'text/html';
 			//prepare the query
 			const query = `SELECT name from user where email = '${body.email}'`;
 			//execute the query
@@ -276,11 +272,13 @@ export default {
 					'',
 					body.email
 				);
-				responseMessage = `Password reset sent to your email click <a href="/">here</a>`;
-				//todo send email, update user account to isVerifed = 0
-			} else responseMessage = `wrong email address`;
+				responseMessage = `Password reset sent to your email address`;
+			} else {
+				code = 401;
+				responseMessage = `wrong email address`;
+			}
 			//send the response
-			return sendResponse(responseMessage, code, contentType);
+			return sendResponse(responseMessage, code, 'text/html', { 'X-Auth-Token': '', 'X-Delete-Row': 0 });
 		}
 
 		/**
@@ -291,32 +289,34 @@ export default {
 		 */
 		async function processChangePassword(body, requestUrl) {
 			const url = new URL(requestUrl);
-			//set a response object
-			let responseObj;
 			//set the response code
 			let code = 200;
 			//set a response message
 			let responseMessage = '';
-			//set the content type
-			let contentType = 'text/html';
 			//check passwords
-			if (body.password != body.password2) responseMessage = `passwords do not match`;
-			else {
+			if (body.password != body.password2) {
+				code = 401;
+				responseMessage = `passwords do not match`;
+			} else {
 				//prepare the query
 				const query = `UPDATE user SET isVerified = 1, password = '${body.password}',verifyCode = '' WHERE verifyCode = '${getUrlParameter(
 					url,
 					'verifyCode'
 				)}' `;
 				//execute the query
-				const data = await executeQuery(env.DB, query, false, false);
+				const data = await executeQuery(env.DB, query, false, true);
+
 				//get the token
 				if (data.meta.changes > 0) {
-					responseMessage = `Password has been updated  click here to <a href="${env.FRONTEND_URL}login">login</a>`;
+					responseMessage = `Password has been updated`;
 					//todo send email, update user account to isVerifed = 0
-				} else responseMessage = `Password has not been updated`;
+				} else {
+					code = 401;
+					responseMessage = `Verify code not correct password has not been updated`;
+				}
 			}
 			//send the response
-			return sendResponse(responseMessage, code, contentType);
+			return sendResponse(responseMessage, code, 'text/html', { 'X-Auth-Token': '', 'X-Delete-Row': 0 });
 		}
 
 		// Handle POST request
