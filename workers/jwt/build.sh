@@ -9,14 +9,14 @@ kill_rogue_processes() {
 # Build local database
 if [ "$1" == "dbl" ]; then
     echo "Building local database"
-    npx wrangler d1 execute htmx --local --file=../schema.sql
+    sduo npx wrangler d1 execute htmx --local --file=../schema.sql
     exit 0
 fi
 
 # Build remote database
 if [ "$1" == "dbr" ]; then
     echo "Building remote database"
-    npx wrangler d1 execute htmx --file=../schema.sql
+    sudo npx wrangler d1 execute htmx --remote --file=../schema.sql
     exit 0
 fi
 
