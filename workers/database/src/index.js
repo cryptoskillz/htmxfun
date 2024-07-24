@@ -352,6 +352,43 @@ async function getTableFields(env, tableName) {
 }
 
 /**
+ * Executes a SQL query using the provided database connection and returns the result.
+ *
+ * @param {Object} db - The database connection object.
+ * @param {string} query - The SQL query to execute.
+ * @param {Array} [params=[]] - The parameters to bind to the query.
+ * @param {boolean} [returnOne=false] - Whether to return only the first result.
+ * @param {boolean} [debug=false] - Whether to log the query and result for debugging purposes.
+ * @return {Promise<Object|Array>} A promise that resolves to the query result.
+ * @throws {Error} If there is an error executing the query.
+ */
+async function executeQuery(db, query, params = [], returnOne = false, debug = false) {
+	try {
+		// Prepare the statement with parameters
+		const stmt = db.prepare(query);
+		// Execute the statement
+		let data;
+		// Execute query based on whether we want one or all data
+		if (returnOne) {
+			data = await stmt.bind(...params).first(); // Bind parameters and get the first row
+		} else {
+			data = await stmt.bind(...params).all(); // Bind parameters and get all rows
+		}
+		// Debug mode
+		if (debug) {
+			console.log('Query:', query);
+			console.log('Parameters:', params);
+			console.log('Data:', data);
+		}
+		// Return the data
+		return data;
+	} catch (error) {
+		console.error('Error executing query:', error);
+		throw error;
+	}
+}
+
+/**
  * Builds an SQL INSERT query based on the given table name, environment, and request body.
  *
  * @param {string} tableName - The name of the table to insert into.
@@ -362,16 +399,13 @@ async function getTableFields(env, tableName) {
 async function buildInsertQuery(tableName, env, body) {
 	// Get all fields
 	const allFields = await getTableFields(env, tableName);
-
 	// Filter out blacklisted fields and 'authToken'
 	const fields = allFields.filter((field) => !blackListFields.includes(field) && field !== 'authToken');
-
 	// Generate extended data based on the fields
 	const extendedData = generateExtendedData(fields);
 	const insertFields = [];
 	const insertValues = [];
 	const params = [];
-
 	// Loop through the fields
 	fields.forEach((field) => {
 		// Check if field is present in either body or extendedData
@@ -386,11 +420,9 @@ async function buildInsertQuery(tableName, env, body) {
 			insertValues.push('?');
 		}
 	});
-
 	// Build INSERT query
 	const fieldNames = insertFields.join(', ');
 	const valuePlaceholders = insertValues.join(', ');
-
 	// Return the query and the params
 	return {
 		query: `INSERT INTO ${tableName} (${fieldNames}) VALUES (${valuePlaceholders})`,
@@ -678,41 +710,4 @@ function renderSelectField(field, formData, lookupData) {
             ${options}
         </select>
     `;
-}
-
-/**
- * Executes a SQL query using the provided database connection and returns the result.
- *
- * @param {Object} db - The database connection object.
- * @param {string} query - The SQL query to execute.
- * @param {Array} [params=[]] - The parameters to bind to the query.
- * @param {boolean} [returnOne=false] - Whether to return only the first result.
- * @param {boolean} [debug=false] - Whether to log the query and result for debugging purposes.
- * @return {Promise<Object|Array>} A promise that resolves to the query result.
- * @throws {Error} If there is an error executing the query.
- */
-async function executeQuery(db, query, params = [], returnOne = false, debug = false) {
-	try {
-		// Prepare the statement with parameters
-		const stmt = db.prepare(query);
-		// Execute the statement
-		let data;
-		// Execute query based on whether we want one or all data
-		if (returnOne) {
-			data = await stmt.bind(...params).first(); // Bind parameters and get the first row
-		} else {
-			data = await stmt.bind(...params).all(); // Bind parameters and get all rows
-		}
-		// Debug mode
-		if (debug) {
-			console.log('Query:', query);
-			console.log('Parameters:', params);
-			console.log('Data:', data);
-		}
-		// Return the data
-		return data;
-	} catch (error) {
-		console.error('Error executing query:', error);
-		throw error;
-	}
 }
