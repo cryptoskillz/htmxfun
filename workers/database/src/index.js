@@ -255,7 +255,7 @@ async function handleDataModification(request, env, id, tableName, body = '', au
 	if (!validateData(fields)) return sendResponse('Invalid data', 400);
 	//build the query
 	const sql =
-		request.method === 'POST' ? await buildInsertQuery(tableName, env, body) : buildUpdateQuery(tableName, fields, body, id, true);
+		request.method === 'POST' ? await buildInsertQuery(tableName, env, body) : buildUpdateQuery(tableName, fields, body, id, false);
 	// execute the query
 	await executeQuery(env.DB, sql, true, false);
 	// send the response
@@ -498,18 +498,20 @@ function renderTable(fields, data, tableName, env, workerAction) {
 			)
 			.join('');
 		return `
-		
           <table class="pure-table">
 				<thead>
+				<tr>
+					<th colspan="2">
+						<input _="on input show <tbody>tr/> in closest <table/> when its textContent.toLowerCase() contains my value.toLowerCase()"/>
+					</th>
+				</tr>
 					<tr>
 						<th class="px-4 py-2">Tables</th>
 						<th class="px-4 py-2">Action</th>
 					</tr>
 				</thead>
 				<tbody>${tableList}</tbody>
-			</table>
-			
-        `;
+			</table>`;
 	} else {
 		const rows = data.results; // Access the results array from data
 		// Render specific table
@@ -541,6 +543,11 @@ function renderTable(fields, data, tableName, env, workerAction) {
 		return `
 			<table class="pure-table">
 				<thead>
+				<tr>
+					<th colspan="4">
+						<input _="on input show <tbody>tr/> in closest <table/> when its textContent.toLowerCase() contains my value.toLowerCase()"/>
+					</th>
+				</tr>
 					<tr>${headers}<th class="px-4 py-2">Action</th></tr>
 				</thead>
 				<tbody>${bodyRows}</tbody>
@@ -611,10 +618,11 @@ async function renderForm(renderType, tableName, fields, formData, env) {
 	// Construct form HTML based on renderType, tableName, etc.
 	const formAction = renderType === 'formedit' ? 'hx-put' : 'hx-post';
 	const formUrl = renderType === 'formedit' ? `${env.DATABASE_URL}${tableName}/${formData.id}` : `${env.DATABASE_URL}${tableName}/`;
+	const resetForm = renderType === 'formedit' ? '' : 'hx-on--after-request="this.reset()"';
 	return `
-        <form class="pure-form pure-form-stacked" ${formAction}="${formUrl}" hx-target="#responseText" hx-swap="innerHTML">
+        <form class="pure-form pure-form-stacked" ${formAction}="${formUrl}" hx-target="#responseText" hx-swap="innerHTML" ${resetForm}>
             ${formFields.join('')}
-            <button type="submit" class="pure-button pure-button-primary">${renderType === 'formedit' ? 'Update' : 'Add'}</button>
+            <button type="submit" class="pure-button pure-button-primary">${renderType === 'formedit' ? 'Update' : 'Add'} </button>
             <a href="/${tableName}/" class="pure-button pure-button-primary">Done</a>
 
         </form>
@@ -639,7 +647,7 @@ function renderInputField(field, formData, renderType) {
 	const maxLength = field.maxLength ? `maxlength="${field.maxLength}"` : '';
 	return `
         <label for="${field.name}">${field.name}</label>
-        <input type="${field.inputType}" id="${field.name}" name="${field.name}" value="${value}" ${disableAttr} ${requiredAttr} ${minLength} ${maxLength}/>
+        <input class="formeElement" type="${field.inputType}" id="${field.name}" name="${field.name}" value="${value}" ${disableAttr} ${requiredAttr} ${minLength} ${maxLength}/>
     `;
 }
 

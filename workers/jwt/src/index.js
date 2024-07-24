@@ -1,3 +1,4 @@
+import bcrypt from 'bcryptjs';
 import jwt from '@tsndr/cloudflare-worker-jwt';
 var uuid = require('uuid');
 export default {
@@ -163,7 +164,7 @@ export default {
 			//check if the user exists
 			if (data.total != 0) {
 				//user already exists
-				responseMessage = `User already exists`;
+				responseMessage = `Email already exists`;
 				//set the code
 				code = 401;
 			} else {
@@ -176,8 +177,10 @@ export default {
 				let signupName = '';
 				if (body.username == undefined) signupUsername = body.email.split('@')[0];
 				if (body.name == undefined) signupName = body.email.split('@')[0];
+				//hash the password
+				const hashedPassword = bcrypt.hashSync('test', 10);
 				//create the user
-				query = `INSERT INTO user (name,username,email,password,apiSecret,confirmed,isBlocked,isAdmin,verifyCode) VALUES ('${signupName}','${signupUsername}','${body.email}','${body.password}','${apiSecret}',0, 0,0,'${verifyCode}')`;
+				query = `INSERT INTO user (name,username,email,password,apiSecret,confirmed,isBlocked,isAdmin,verifyCode) VALUES ('${signupName}','${signupUsername}','${body.email}','${hashedPassword}','${apiSecret}',0, 0,0,'${verifyCode}')`;
 				data = await executeQuery(env.DB, query, false, false);
 				//debug ghost out the line and enable the enable
 				//data.success = true;
@@ -214,10 +217,14 @@ export default {
 			//set a response message
 			let responseMessage = '';
 			//build the query
-			const query = `SELECT user.isDeleted,user.isBlocked,user.name,user.username,user.email,user.phone,user.id,user.isAdmin,user.apiSecret from user LEFT JOIN userAccess ON user.id = userAccess.userId where user.email = '${body.email}' and user.password = '${body.password}'`;
+			const query = `SELECT user.isDeleted, user.isBlocked, user.name, user.username, user.email, user.phone, user.id, user.isAdmin, user.apiSecret, user.password
+                 FROM user
+                 LEFT JOIN userAccess ON user.id = userAccess.userId
+                 WHERE user.email = '${body.email}'`;
 			const data = await executeQuery(env.DB, query, true, false);
 			//check if the user exists
-			if (data != null) {
+			console.log(data);
+			if (data && bcrypt.compareSync(body.password, data.password)) {
 				//get the token
 				token = await jwt.sign(
 					{ data: data },
