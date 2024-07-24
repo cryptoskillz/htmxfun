@@ -190,7 +190,7 @@ export default {
 				const hashedPassword = bcrypt.hashSync(body.password, 10);
 				//create the user
 				query = `INSERT INTO user (name,username,email,password,apiSecret,confirmed,isBlocked,isAdmin,verifyCode) VALUES (?,?,?,?,?,?,?,?,?)`;
-				params = [signupName, signupUsername, body.email, hashedPassword, apiSecret, 0, 0, 0, verifyCode];
+				params = [signupName, signupUsername, body.email, hashedPassword, apiSecret, '0', 0, 0, verifyCode];
 				data = await executeQuery(env.DB, query, params, false, false);
 				//debug ghost out the line and enable the enable
 				//data.success = true;
@@ -259,7 +259,7 @@ export default {
 			//build query
 			const query = `UPDATE user SET isVerified = ?,verifyCode = ? WHERE verifyCode = ?`;
 			const params = [1, '', getUrlParameter(url, 'verifyCode')];
-			const data = await executeQuery(env.DB, query, params, false, false);
+			const data = await executeQuery(env.DB, query, params, false, true);
 			if (data.meta.changes > 0) responseMessage = `Verify successful, click  here to <a href="/login">Login</a>`;
 			else {
 				code = 401;
@@ -282,7 +282,8 @@ export default {
 			//get the token
 			if (data != null) {
 				const verifyCode = uuid.v4();
-				const query = `UPDATE user SET verifyCode = '${verifyCode}' WHERE email = ?`;
+				const query = `UPDATE user SET verifyCode = ? WHERE email = ?`;
+				const params = [verifyCode, body.email];
 				const data = await executeQuery(env.DB, query, params, false, false);
 				//send the email
 				//this is faking the email worker until we recode it
@@ -319,12 +320,14 @@ export default {
 				code = 401;
 				responseMessage = `passwords do not match`;
 			} else {
+				//hash the password
+				const hashedPassword = bcrypt.hashSync(body.password, 10);
 				//prepare the query
 				const query = `UPDATE user SET isVerified = ?, password = ?,verifyCode = ? WHERE verifyCode = ? `;
-				const params = [1, body.password, '', getUrlParameter(url, 'verifyCode')];
+				const params = [1, hashedPassword, '', getUrlParameter(url, 'verifyCode')];
 
 				//execute the query
-				const data = await executeQuery(env.DB, query, false, true);
+				const data = await executeQuery(env.DB, query, params, false, false);
 
 				//get the token
 				if (data.meta.changes > 0) {

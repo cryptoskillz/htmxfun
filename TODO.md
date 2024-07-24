@@ -8,8 +8,6 @@ Parameterized Query: The query uses a ? placeholder for the email parameter, and
 ## buildit
 
 ## jwt worker tasks
-test the new sanatised sql statement (forgot password etc)
-
 
 ## email worker tasks
 
