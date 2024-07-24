@@ -52,6 +52,7 @@ export default {
 		 *
 		 * @param {Object} db - The database connection object.
 		 * @param {string} query - The SQL query to execute.
+		 * @param {Array} [params=[]] - The parameters to bind to the query.
 		 * @param {boolean} [returnOne=false] - Whether to return only the first result.
 		 * @param {boolean} [debug=false] - Whether to log the query and result for debugging purposes.
 		 * @return {Promise<Object|Array>} A promise that resolves to the query result.
@@ -256,8 +257,8 @@ export default {
 			//set a response message
 			let responseMessage = '';
 			//build query
-			const query = `UPDATE user SET isVerified = 1,verifyCode = '' WHERE verifyCode = ?`;
-			const params = [getUrlParameter(url, 'verifyCode')];
+			const query = `UPDATE user SET isVerified = ?,verifyCode = ? WHERE verifyCode = ?`;
+			const params = [1, '', getUrlParameter(url, 'verifyCode')];
 			const data = await executeQuery(env.DB, query, params, false, false);
 			if (data.meta.changes > 0) responseMessage = `Verify successful, click  here to <a href="/login">Login</a>`;
 			else {

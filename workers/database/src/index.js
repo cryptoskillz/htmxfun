@@ -191,8 +191,16 @@ async function handleGetRequest(request, env, tableName, params, authToken, work
 		//set one or all records
 		if (renderType == 'table') returnOne = false;
 		// Build query
-		query = buildQuery(params, tableName, fieldNames, renderType, false);
-		data = await executeQuery(env.DB, query, returnOne, false);
+		let query;
+		let params;
+		if (renderType === 'formedit') {
+			query = `SELECT * FROM ${tableName} WHERE isDeleted = ? AND id = ?`;
+			params = [0, params.id];
+		} else {
+			query = `SELECT ${fieldNames} FROM {tableName} WHERE isDeleted = ?`;
+			params = [tableName, 0];
+		}
+		data = await executeQuery(env.DB, query, params, returnOne, false);
 	}
 	// Retrieve fields
 	try {
@@ -254,10 +262,13 @@ async function handleDataModification(request, env, id, tableName, body = '', au
 	// Validate data
 	if (!validateData(fields)) return sendResponse('Invalid data', 400);
 	//build the query
-	const sql =
-		request.method === 'POST' ? await buildInsertQuery(tableName, env, body) : buildUpdateQuery(tableName, fields, body, id, false);
+	let query;
+	let params;
+	//const sql =
+	({ query, params } =
+		request.method === 'POST' ? await buildInsertQuery(tableName, env, body) : await buildUpdateQuery(tableName, fields, body, id, false));
 	// execute the query
-	await executeQuery(env.DB, sql, true, false);
+	await executeQuery(env.DB, query, params, true, false);
 	// send the response
 	responseMessage = `Record ${request.method === 'POST' ? 'added' : 'updated'} successfully`;
 	return sendResponse(responseMessage, code, 'text/html', { 'X-Auth-Token': '', 'X-Delete-Row': 0 });
@@ -315,29 +326,6 @@ function determineRenderType(params) {
 }
 
 /**
- * Builds a SQL query based on the provided parameters.
- *
- * @param {Object} params - The parameters for the query.
- * @param {string} tableName - The name of the table to query.
- * @param {string} fieldNames - The names of the fields to select.
- * @param {string} renderType - The type of rendering.
- * @param {boolean} [debug=false] - Whether to log the query for debugging purposes.
- * @return {string} The built SQL query.
- */
-function buildQuery(params, tableName, fieldNames, renderType, debug = false) {
-	let query;
-
-	//get the query based on the render type
-	if (renderType === 'formedit') query = `SELECT * FROM ${tableName} WHERE isDeleted = 0 AND id = ${params.id}`;
-	else query = `SELECT ${fieldNames} FROM ${tableName} WHERE isDeleted = 0`;
-	//check if we in debug mode
-	if (debug == true) console.log(query);
-
-	//return the query
-	return query;
-}
-
-/**
  * Validates the given data using a custom validation logic.
  *
  * @param {any} data - The data to be validated.
@@ -356,9 +344,10 @@ function validateData(data) {
  * @return {Array} An array of field names from the specified table.
  */
 async function getTableFields(env, tableName) {
-	//TODO : Remove this to get it from the setfilds function
-	const query = `PRAGMA table_info(${tableName});`;
-	const data = await executeQuery(env.DB, query, false, false);
+	//TODO : Remove this to get it from the setfields function
+	const query = `PRAGMA table_info(?);`;
+	const params = [tableName]; // Specify the table name
+	const data = await executeQuery(env.DB, query, params, false, false);
 	return data.results.map((row) => row.name);
 }
 
@@ -381,22 +370,32 @@ async function buildInsertQuery(tableName, env, body) {
 	const extendedData = generateExtendedData(fields);
 	const insertFields = [];
 	const insertValues = [];
-	//loop through the fields
+	const params = [];
+
+	// Loop through the fields
 	fields.forEach((field) => {
 		// Check if field is present in either body or extendedData
 		if (!blackListFields.includes(field) && (body.hasOwnProperty(field) || extendedData.hasOwnProperty(field))) {
 			// Add field to insertFields
 			insertFields.push(field);
-			// Get value from extended data or body and wrap in quotes if necessary
-			const value = extendedData[field] ? `'${extendedData[field]}'` : `'${body[field]}'`;
-			// Add value to insertValues
-			insertValues.push(value);
+			// Get value from extended data or body
+			const value = extendedData[field] || body[field];
+			// Add value to params array
+			params.push(value);
+			// Add '?' placeholder to insertValues
+			insertValues.push('?');
 		}
 	});
+
 	// Build INSERT query
 	const fieldNames = insertFields.join(', ');
-	const values = insertValues.join(', ');
-	return `INSERT INTO ${tableName} (${fieldNames}) VALUES (${values})`;
+	const valuePlaceholders = insertValues.join(', ');
+
+	// Return the query and the params
+	return {
+		query: `INSERT INTO ${tableName} (${fieldNames}) VALUES (${valuePlaceholders})`,
+		params,
+	};
 }
 
 /**
@@ -409,15 +408,21 @@ async function buildInsertQuery(tableName, env, body) {
  * @param {boolean} [debug=false] - Whether to log the generated SQL query for debugging.
  * @return {string} The constructed SQL UPDATE query.
  */
-function buildUpdateQuery(tableName, fields, body, id, debug = false) {
-	// Build SET clause
-	const setClause = fields.map((field) => `${field} = '${body[field]}'`).join(', ');
+async function buildUpdateQuery(tableName, fields, body, id, debug = false) {
+	// Build SET clause with placeholders
+	const setClause = fields.map((field) => `${field} = ?`).join(', ');
+	const params = fields.map((field) => body[field]);
+
+	// Add the id to the params array
+	params.push(id);
+
 	// Build UPDATE query
-	let sql;
-	sql = `UPDATE ${tableName} SET ${setClause} WHERE id = ${id}`;
-	// Log query if debug mode is enabledÍ
-	if (debug == true) console.log(sql);
-	return sql;
+	const sql = `UPDATE ${tableName} SET ${setClause} WHERE id = ?`;
+
+	// Log query if debug mode is enabled
+	if (debug) console.log('SQL Query:', sql, 'Parameters:', params);
+
+	return { query: sql, params };
 }
 
 /**
@@ -585,9 +590,10 @@ async function renderForm(renderType, tableName, fields, formData, env) {
 				if (lookupDataFiltered.length > 0) {
 					if (lookupDataFiltered[0].swingTable) {
 						// Fetch data from swingTable using SQL query only if swingTable is defined
-						const query = `SELECT fieldName, fieldValue FROM ${lookupDataFiltered[0].swingTable}`;
+						const query = `SELECT fieldName, fieldValue FROM ?`;
+						const params = [lookupDataFiltered[0].swingTable];
 						try {
-							const { success, results } = await executeQuery(env.DB, query, false, false);
+							const { success, results } = await executeQuery(env.DB, query, params, false, false);
 
 							if (success && Array.isArray(results)) {
 								const lookupDataF = results.map((row) => ({
@@ -673,30 +679,37 @@ function renderSelectField(field, formData, lookupData) {
         </select>
     `;
 }
+
 /**
  * Executes a SQL query using the provided database connection and returns the result.
  *
  * @param {Object} db - The database connection object.
  * @param {string} query - The SQL query to execute.
+ * @param {Array} [params=[]] - The parameters to bind to the query.
  * @param {boolean} [returnOne=false] - Whether to return only the first result.
  * @param {boolean} [debug=false] - Whether to log the query and result for debugging purposes.
  * @return {Promise<Object|Array>} A promise that resolves to the query result.
  * @throws {Error} If there is an error executing the query.
  */
-async function executeQuery(db, query, returnOne = false, debug = false) {
+async function executeQuery(db, query, params = [], returnOne = false, debug = false) {
 	try {
-		// Execute query
+		// Prepare the statement with parameters
 		const stmt = db.prepare(query);
+		// Execute the statement
 		let data;
-		//check if it is one or all data
-		if (returnOne == false) data = await stmt.all();
-		else data = await stmt.first();
-		//check if we in debug mode
-		if (debug == true) {
-			console.log(returnOne);
-			console.log(query);
-			console.log(data);
+		// Execute query based on whether we want one or all data
+		if (returnOne) {
+			data = await stmt.bind(...params).first(); // Bind parameters and get the first row
+		} else {
+			data = await stmt.bind(...params).all(); // Bind parameters and get all rows
 		}
+		// Debug mode
+		if (debug) {
+			console.log('Query:', query);
+			console.log('Parameters:', params);
+			console.log('Data:', data);
+		}
+		// Return the data
 		return data;
 	} catch (error) {
 		console.error('Error executing query:', error);
