@@ -1,12 +1,13 @@
 # TODO
 
+Parameterized Query: The query uses a ? placeholder for the email parameter, and the executeQuery function safely passes the email parameter to the prepared statement. This prevents SQL injection.
+
+
 ## toml
 
 ## buildit
 
 ## jwt worker tasks
-
-store the password as a hash in the database
 
 ## email worker tasks
 

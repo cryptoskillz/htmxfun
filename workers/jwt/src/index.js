@@ -1,3 +1,4 @@
+import bcrypt from 'bcryptjs';
 import jwt from '@tsndr/cloudflare-worker-jwt';
 var uuid = require('uuid');
 export default {
@@ -51,25 +52,31 @@ export default {
 		 *
 		 * @param {Object} db - The database connection object.
 		 * @param {string} query - The SQL query to execute.
+		 * @param {Array} [params=[]] - The parameters to bind to the query.
 		 * @param {boolean} [returnOne=false] - Whether to return only the first result.
 		 * @param {boolean} [debug=false] - Whether to log the query and result for debugging purposes.
 		 * @return {Promise<Object|Array>} A promise that resolves to the query result.
 		 * @throws {Error} If there is an error executing the query.
 		 */
-		async function executeQuery(db, query, returnOne = false, debug = false) {
+		async function executeQuery(db, query, params = [], returnOne = false, debug = false) {
 			try {
-				// Execute query
+				// Prepare the statement with parameters
 				const stmt = db.prepare(query);
+				// Execute the statement
 				let data;
-				//check if it is one or all data
-				if (returnOne == false) data = await stmt.all();
-				else data = await stmt.first();
-				//check if we in debug mode
-				if (debug == true) {
-					console.log(returnOne);
-					console.log(query);
-					console.log(data);
+				// Execute query based on whether we want one or all data
+				if (returnOne) {
+					data = await stmt.bind(...params).first(); // Bind parameters and get the first row
+				} else {
+					data = await stmt.bind(...params).all(); // Bind parameters and get all rows
 				}
+				// Debug mode
+				if (debug) {
+					console.log('Query:', query);
+					console.log('Parameters:', params);
+					console.log('Data:', data);
+				}
+				// Return the data
 				return data;
 			} catch (error) {
 				console.error('Error executing query:', error);
@@ -157,13 +164,16 @@ export default {
 			let responseMessage = '';
 			let query = '';
 			let data;
+			let params;
 			//build the query
-			query = `SELECT COUNT(*) as total FROM user WHERE email = '${body.email}'`;
-			data = await executeQuery(env.DB, query, true);
+			query = `SELECT COUNT(*) as total FROM user WHERE email = ?`;
+			params = [body.email]; // `userEmail` is a variable containing the user input
+
+			data = await executeQuery(env.DB, query, params, true);
 			//check if the user exists
 			if (data.total != 0) {
 				//user already exists
-				responseMessage = `User already exists`;
+				responseMessage = `Email already exists`;
 				//set the code
 				code = 401;
 			} else {
@@ -176,9 +186,12 @@ export default {
 				let signupName = '';
 				if (body.username == undefined) signupUsername = body.email.split('@')[0];
 				if (body.name == undefined) signupName = body.email.split('@')[0];
+				//hash the password
+				const hashedPassword = bcrypt.hashSync(body.password, 10);
 				//create the user
-				query = `INSERT INTO user (name,username,email,password,apiSecret,confirmed,isBlocked,isAdmin,verifyCode) VALUES ('${signupName}','${signupUsername}','${body.email}','${body.password}','${apiSecret}',0, 0,0,'${verifyCode}')`;
-				data = await executeQuery(env.DB, query, false, false);
+				query = `INSERT INTO user (name,username,email,password,apiSecret,confirmed,isBlocked,isAdmin,verifyCode) VALUES (?,?,?,?,?,?,?,?,?)`;
+				params = [signupName, signupUsername, body.email, hashedPassword, apiSecret, '0', 0, 0, verifyCode];
+				data = await executeQuery(env.DB, query, params, false, false);
 				//debug ghost out the line and enable the enable
 				//data.success = true;
 				//check if the user was created
@@ -214,10 +227,15 @@ export default {
 			//set a response message
 			let responseMessage = '';
 			//build the query
-			const query = `SELECT user.isDeleted,user.isBlocked,user.name,user.username,user.email,user.phone,user.id,user.isAdmin,user.apiSecret from user LEFT JOIN userAccess ON user.id = userAccess.userId where user.email = '${body.email}' and user.password = '${body.password}'`;
-			const data = await executeQuery(env.DB, query, true, false);
+			const query = `SELECT user.isDeleted, user.isBlocked, user.name, user.username, user.email, user.phone, user.id, user.isAdmin, user.apiSecret, user.password
+                 FROM user
+                 LEFT JOIN userAccess ON user.id = userAccess.userId
+                 WHERE user.email = ?`;
+			const params = [body.email]; // `userEmail` is a variable containing the user input
+
+			const data = await executeQuery(env.DB, query, params, true, false);
 			//check if the user exists
-			if (data != null) {
+			if (data && bcrypt.compareSync(body.password, data.password)) {
 				//get the token
 				token = await jwt.sign(
 					{ data: data },
@@ -239,8 +257,9 @@ export default {
 			//set a response message
 			let responseMessage = '';
 			//build query
-			const query = `UPDATE user SET isVerified = 1,verifyCode = '' WHERE verifyCode = '${getUrlParameter(url, 'verifyCode')}'`;
-			const data = await executeQuery(env.DB, query, false, false);
+			const query = `UPDATE user SET isVerified = ?,verifyCode = ? WHERE verifyCode = ?`;
+			const params = [1, '', getUrlParameter(url, 'verifyCode')];
+			const data = await executeQuery(env.DB, query, params, false, true);
 			if (data.meta.changes > 0) responseMessage = `Verify successful, click  here to <a href="/login">Login</a>`;
 			else {
 				code = 401;
@@ -255,14 +274,17 @@ export default {
 			//set a response message
 			let responseMessage = '';
 			//prepare the query
-			const query = `SELECT name from user where email = '${body.email}'`;
+			const query = `SELECT name from user where email = ?`;
+			const params = [body.email];
+
 			//execute the query
-			const data = await executeQuery(env.DB, query, true, false);
+			const data = await executeQuery(env.DB, query, params, true, false);
 			//get the token
 			if (data != null) {
 				const verifyCode = uuid.v4();
-				const query = `UPDATE user SET verifyCode = '${verifyCode}' WHERE email = '${body.email}'`;
-				const data = await executeQuery(env.DB, query, false, false);
+				const query = `UPDATE user SET verifyCode = ? WHERE email = ?`;
+				const params = [verifyCode, body.email];
+				const data = await executeQuery(env.DB, query, params, false, false);
 				//send the email
 				//this is faking the email worker until we recode it
 				//console.log(`${env.FRONTEND_URL}changepassword/?verifyCode=${verifyCode}`);
@@ -298,13 +320,14 @@ export default {
 				code = 401;
 				responseMessage = `passwords do not match`;
 			} else {
+				//hash the password
+				const hashedPassword = bcrypt.hashSync(body.password, 10);
 				//prepare the query
-				const query = `UPDATE user SET isVerified = 1, password = '${body.password}',verifyCode = '' WHERE verifyCode = '${getUrlParameter(
-					url,
-					'verifyCode'
-				)}' `;
+				const query = `UPDATE user SET isVerified = ?, password = ?,verifyCode = ? WHERE verifyCode = ? `;
+				const params = [1, hashedPassword, '', getUrlParameter(url, 'verifyCode')];
+
 				//execute the query
-				const data = await executeQuery(env.DB, query, false, true);
+				const data = await executeQuery(env.DB, query, params, false, false);
 
 				//get the token
 				if (data.meta.changes > 0) {

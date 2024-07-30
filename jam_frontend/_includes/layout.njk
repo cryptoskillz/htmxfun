@@ -18,7 +18,11 @@
 
     <title>{{ title }}</title>
   </head>
-  <body>
+  <body
+    _="on every htmx:beforeSend in <button:not(.no-disable)/> 
+         tell it 
+             toggle [disabled='true'] until htmx:afterOnLoad"
+  >
     <div class="pure-g">
       <div class="pure-u-1">HTMX Example</div>
       <div class="pure-menu pure-menu-horizontal">
@@ -37,6 +41,7 @@
 
     <script src="https://unpkg.com/htmx.org@2.0.0"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://unpkg.com/hyperscript.org@0.9.12"></script>
     <script src="/assets/js/script.js"></script>
     <script>
       // Set htmx configuration
