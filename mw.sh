@@ -30,7 +30,7 @@ deploy_database() {
     echo "deploying $db database to database worker"
     cd workers/database/
     # Build local database
-    if [ "$2" == "dbl" ]; then
+    if [ "$2" == "l" ]; then
         echo "Building local database for database worker"
         sudo npx wrangler d1 execute htmx --local --file=../schema.sql
         echo "Building local database database for jwt worker"
@@ -41,7 +41,7 @@ deploy_database() {
     fi
 
     # Build remote database
-    if [ "$2" == "dbr" ]; then
+    if [ "$2" == "r" ]; then
         echo "Building remote database"
         sudo npx wrangler d1 execute htmx --remote --file=../schema.sql
         exit 0
@@ -78,14 +78,14 @@ elif [ "$1" == "start" ]; then
     start_wrangler "workers/jwt" 8787
     start_wrangler "workers/database" 8788  # Example: different port for database
     start_wrangler "workers/email" 8789    # Example: different port for email
-elif [ "$1" == "database" ]; then
+elif [ "$1" == "db" ]; then
     # Start workers
     deploy_database "workers/jwt" $2
    
 elif [ "$1" == "deploy" ]; then
     deploy_workers
 else
-    echo "Usage: $0 [kill|sync|start|deploy|database dbl/dbr]"
+    echo "Usage: $0 [kill|sync|start|deploy|db l/r]"
     exit 1
 fi
 echo "done"

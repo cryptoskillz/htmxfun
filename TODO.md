@@ -1,7 +1,7 @@
 # TODO
 
 Parameterized Query: The query uses a ? placeholder for the email parameter, and the executeQuery function safely passes the email parameter to the prepared statement. This prevents SQL injection.
-
+fix console errors
 
 ## toml
 
