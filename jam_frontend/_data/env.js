@@ -9,13 +9,13 @@ const envConfigs = {
   local: {
     ...commonConfig,
     ENVIRONMENT: "local",
-    API_URL: "http://localhost:8787/",
+    API_DB_URL: "http://localhost:8787/",
     API_JWT_URL: "http://localhost:8788/",
   },
   production: {
     ...commonConfig,
     ENVIRONMENT: "production",
-    API_URL: "https://htmxdatabase.orbitlabsworker.workers.dev/",
+    API_DB_URL: "https://htmxdatabase.orbitlabsworker.workers.dev/",
     API_JWT_URL: "https://jwt.orbitlabsworker.workers.dev/",
   },
 };
