@@ -1,9 +1,3 @@
-/*
-	TODO:
-
-	when you click back it will render the other forms oddly (check out why)
-*/
-
 import jwt from '@tsndr/cloudflare-worker-jwt';
 
 // fields to ignore
