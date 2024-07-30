@@ -186,15 +186,15 @@ async function handleGetRequest(request, env, tableName, params, authToken, work
 		if (renderType == 'table') returnOne = false;
 		// Build query
 		let query;
-		let params;
+		let queryParams = [];
 		if (renderType === 'formedit') {
 			query = `SELECT * FROM ${tableName} WHERE isDeleted = ? AND id = ?`;
-			params = [0, params.id];
+			queryParams = [0, params.id];
 		} else {
-			query = `SELECT ${fieldNames} FROM {tableName} WHERE isDeleted = ?`;
-			params = [tableName, 0];
+			query = `SELECT ${fieldNames} FROM ${tableName} WHERE isDeleted = ?`;
+			queryParams = [0];
 		}
-		data = await executeQuery(env.DB, query, params, returnOne, false);
+		data = await executeQuery(env.DB, query, queryParams, returnOne, false);
 	}
 	// Retrieve fields
 	try {
@@ -262,7 +262,8 @@ async function handleDataModification(request, env, id, tableName, body = '', au
 	({ query, params } =
 		request.method === 'POST' ? await buildInsertQuery(tableName, env, body) : await buildUpdateQuery(tableName, fields, body, id, false));
 	// execute the query
-	await executeQuery(env.DB, query, params, true, false);
+
+	await executeQuery(env.DB, query, params, true, true);
 	// send the response
 	responseMessage = `Record ${request.method === 'POST' ? 'added' : 'updated'} successfully`;
 	return sendResponse(responseMessage, code, 'text/html', { 'X-Auth-Token': '', 'X-Delete-Row': 0 });
@@ -338,10 +339,8 @@ function validateData(data) {
  * @return {Array} An array of field names from the specified table.
  */
 async function getTableFields(env, tableName) {
-	//TODO : Remove this to get it from the setfields function
-	const query = `PRAGMA table_info(?);`;
-	const params = [tableName]; // Specify the table name
-	const data = await executeQuery(env.DB, query, params, false, false);
+	const query = `PRAGMA table_info(${tableName});`;
+	const data = await executeQuery(env.DB, query, [], false, false);
 	return data.results.map((row) => row.name);
 }
 
@@ -358,6 +357,7 @@ async function getTableFields(env, tableName) {
  */
 async function executeQuery(db, query, params = [], returnOne = false, debug = false) {
 	try {
+		if (debug) console.log('Query:', query);
 		// Prepare the statement with parameters
 		const stmt = db.prepare(query);
 		// Execute the statement
@@ -370,7 +370,6 @@ async function executeQuery(db, query, params = [], returnOne = false, debug = f
 		}
 		// Debug mode
 		if (debug) {
-			console.log('Query:', query);
 			console.log('Parameters:', params);
 			console.log('Data:', data);
 		}

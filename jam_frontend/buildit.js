@@ -26,7 +26,6 @@ let apiData;
 
 // Console log the build type and API URL
 console.log(`Build type: ${environment}`);
-console.log(`API URL: ${env.API_URL}`);
 
 // Define the source folder, includes folder, destination base folder, and assets folder
 const sourceFolder = "./_source"; // Change this to your source folder path

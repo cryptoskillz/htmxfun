@@ -25,7 +25,7 @@ compatibility_flags = ["nodejs_compat"]
 [vars]
 
 [env.production]
-vars = {SECRET_KEY = "", API_URL = "https://test3.orbitlabsworker.workers.dev/",EMAIL_API = "https://api.postmarkapp.com/",EMAIL_TOKEN = "",EMAIL_FROM="HTMXFUN", EMAIL_API_URL="https://email.cryptoskillz.workers.dev", FORGOT_PASSWORD_EMAIL_TEMPLATE_ID="30458239", PRODUCT_NAME="HTMX Fun", SENDER_EMAIL_NAME="htmxfun",SIGNUP_EMAIL_TEMPLATE_ID="30429839"}
+vars = {SECRET_KEY = "", API_DB_URL = "https://test3.orbitlabsworker.workers.dev/",EMAIL_API = "https://api.postmarkapp.com/",EMAIL_TOKEN = "",EMAIL_FROM="HTMXFUN", EMAIL_API_URL="https://email.cryptoskillz.workers.dev", FORGOT_PASSWORD_EMAIL_TEMPLATE_ID="30458239", PRODUCT_NAME="HTMX Fun", SENDER_EMAIL_NAME="htmxfun",SIGNUP_EMAIL_TEMPLATE_ID="30429839"}
 
 [env.local]
-vars = {SECRET_KEY = "", API_URL = "http://localhost:8787/",EMAIL_API = "https://api.postmarkapp.com/",EMAIL_TOKEN = "",EMAIL_FROM="HTMXFUN", EMAIL_API_URL="http://localhost:8789/", FORGOT_PASSWORD_EMAIL_TEMPLATE_ID="30458239", PRODUCT_NAME="HTMX Fun", SENDER_EMAIL_NAME="htmxfun",SIGNUP_EMAILT_EMPLATE_ID="30429839"}
+vars = {SECRET_KEY = "", API_DB_URL = "http://localhost:8787/",EMAIL_API = "https://api.postmarkapp.com/",EMAIL_TOKEN = "",EMAIL_FROM="HTMXFUN", EMAIL_API_URL="http://localhost:8789/", FORGOT_PASSWORD_EMAIL_TEMPLATE_ID="30458239", PRODUCT_NAME="HTMX Fun", SENDER_EMAIL_NAME="htmxfun",SIGNUP_EMAILT_EMPLATE_ID="30429839"}
