@@ -50,5 +50,5 @@ if lsof -Pi :8788 -sTCP:LISTEN -t >/dev/null ; then
     exit 1
 else
     echo "Starting wrangler dev on port 8788"
-    npx wrangler dev --env local --port 8788
+    npx wrangler dev --env local   --port 8788
 fi

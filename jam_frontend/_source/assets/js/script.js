@@ -54,7 +54,7 @@ function redirectUser(url, timeout = 2000) {
 document.body.addEventListener("htmx:beforeSwap", (event) => {
   // Get the response headers
   const xhr = event.detail.xhr;
-  const token = xhr.getResponseHeader("X-Auth-Token");
+  // const token = xhr.getResponseHeader("X-Auth-Token");
   // Get the response element
   const responseElement = document.getElementById("responseText");
   // Set the response text if it is not a 200
@@ -67,10 +67,10 @@ document.body.addEventListener("htmx:beforeSwap", (event) => {
     }
   } else {
     //check if a token has been returned and swap it
-    if (token != "" && token != null) {
-      //set the token
-      localStorage.setItem("authToken", token);
-    }
+    //if (token != "" && token != null) {
+    //set the token
+    // localStorage.setItem("authToken", token);
+    //}
     //check for a redirect from a hidden input element
     const redirectUrlElement = document.getElementById("redirectUrl");
     //check if a redirect url has been set
@@ -96,10 +96,10 @@ document.addEventListener("htmx:afterRequest", function (event) {
 
 // htmx configRequest
 document.body.addEventListener("htmx:configRequest", function (evt) {
-  // Add the auth token to the request, could move this to hx-vals
-  if (localStorage.getItem("authToken")) {
-    evt.detail.parameters["authToken"] = localStorage.getItem("authToken");
-  } else evt.detail.parameters["authToken"] = "";
+  const xhr = event.detail.xhr;
+  if (xhr) {
+    xhr.withCredentials = true;
+  }
 });
 
 observeTextContentChange("responseText", 5000);

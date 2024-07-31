@@ -52,7 +52,9 @@ export default {
 		if (request.method === 'OPTIONS') {
 			return handleOptions();
 		}
+		console.log('request');
 
+		console.log(request.headers);
 		//sometimes depending if its a get, post, has an auth token etc it passes up the data in different ways in the url, the hxurl or in the form data this code gets it no matter were it is
 		const url = new URL(request.url);
 		const hxUrl = new URL(request.headers.get('Hx-Current-Url'));
@@ -94,10 +96,11 @@ export default {
 function handleOptions() {
 	return new Response(null, {
 		headers: {
-			'Access-Control-Allow-Origin': '*',
-			'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-			'Access-Control-Allow-Headers': '*',
-			'Access-Control-Max-Age': '86400',
+			'Access-Control-Allow-Origin': '*', // Adjust this to specify allowed origins for better security
+			'Access-Control-Allow-Credentials': 'true', // Indicates that cookies and HTTP authentication are allowed
+			'Access-Control-Allow-Methods': 'POST, GET, OPTIONS', // Include other methods as needed
+			'Access-Control-Allow-Headers': 'Content-Type, Authorization', // Specify allowed headers
+			'Access-Control-Max-Age': '86400', // Cache the preflight response for 1 day
 		},
 	});
 }
@@ -139,6 +142,15 @@ async function getLookupData(tableName, fieldName) {
 	return lookUpData;
 }
 
+function parseCookies(cookieHeader) {
+	const cookies = {};
+	cookieHeader.split(';').forEach((cookie) => {
+		const [name, ...rest] = cookie.split('=');
+		cookies[name.trim()] = rest.join('=').trim();
+	});
+	return cookies;
+}
+
 /**
  * Retrieves fields configuration based on the provided table name.
  *
@@ -158,6 +170,11 @@ async function getLookupData(tableName, fieldName) {
  * @return {Response} The response object based on the query execution and rendering.
  */
 async function handleGetRequest(request, env, tableName, params, authToken, workerAction = '') {
+	// Extract the cookie from the request
+
+	const cookieHeader = request.headers.get('Cookie') || '';
+	const cookies = parseCookies(cookieHeader);
+	console.log(cookies);
 	// Validate JWT
 	const jwtValid = await validateJWT(authToken, env.SECRET_KEY);
 	if (!jwtValid)

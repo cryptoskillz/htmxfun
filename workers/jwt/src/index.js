@@ -14,10 +14,11 @@ export default {
 		if (request.method === 'OPTIONS') {
 			return new Response(null, {
 				headers: {
-					'Access-Control-Allow-Origin': '*',
-					'Access-Control-Allow-Methods': 'POST',
-					'Access-Control-Allow-Headers': '*',
-					'Access-Control-Max-Age': '86400',
+					'Access-Control-Allow-Origin': '*', // Adjust this to specify allowed origins for better security
+					'Access-Control-Allow-Credentials': 'true', // Indicates that cookies and HTTP authentication are allowed
+					'Access-Control-Allow-Methods': 'POST, GET, OPTIONS', // Include other methods as needed
+					'Access-Control-Allow-Headers': 'Content-Type, Authorization', // Specify allowed headers
+					'Access-Control-Max-Age': '86400', // Cache the preflight response for 1 day
 				},
 			});
 		}
@@ -247,7 +248,11 @@ export default {
 				responseMessage = `wrong email or password`;
 				code = 401;
 			}
-			return sendResponse(`${responseMessage}`, code, 'text/html', { 'X-Auth-Token': token, 'X-Delete-Row': 0 });
+
+			return sendResponse(`${responseMessage}`, code, 'text/html', {
+				'Set-Cookie': `my_secure_cookie=${token};  HttpOnly; SameSite=Lax; Path=/`,
+				'X-Delete-Row': 0,
+			});
 		}
 
 		async function processVerify(requestUrl) {
